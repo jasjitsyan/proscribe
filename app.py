@@ -1,10 +1,9 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template
 import speech_recognition as sr
 from pydub import AudioSegment
 import openai
-from docx import Document
-from docx.shared import Pt
 import os
+import traceback
 
 app = Flask(__name__)
 
@@ -62,7 +61,6 @@ def upload():
         return render_template('result.html', result=corrected_text)
 
     except Exception as e:
-        import traceback
         traceback.print_exc()  # Print the error traceback to the console
         return f"Error processing file: {str(e)}", 500
 
