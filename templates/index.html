@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proscribe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Proscribe</h1>
+        <h2>Revolutionary AI-Powered Speech-to-Text Translation Software for Medical Professionals</h2>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="file">Upload Audio File:</label>
+            <input type="file" name="file" id="file" accept="audio/*" required>
+            <button type="submit">Upload and Process</button>
+        </form>
+    </div>
+</body>
+</html>
