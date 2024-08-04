@@ -1,5 +1,5 @@
-Flask
-speechrecognition
-python-docx
-openai
-gunicorn
+Flask==2.0.1
+speechrecognition==3.8.1
+openai==0.27.0
+pydub==0.25.1
+gunicorn==20.1.0
