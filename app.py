@@ -4,6 +4,7 @@ from pydub import AudioSegment
 import openai
 from docx import Document
 from docx.shared import Pt
+import os
 
 app = Flask(__name__)
 
@@ -18,15 +19,24 @@ def upload():
         if not file:
             return "No file uploaded", 400
 
+        # Save the uploaded file
+        file_path = "temp." + file.filename.split('.')[-1]
+        file.save(file_path)
+
         # Convert the uploaded file to a format suitable for speech recognition
-        audio = AudioSegment.from_file(file)
-        audio.export("temp.wav", format="wav")
+        audio = AudioSegment.from_file(file_path)
+        wav_path = "temp.wav"
+        audio.export(wav_path, format="wav")
         
         recognizer = sr.Recognizer()
-        audio_file = sr.AudioFile("temp.wav")
+        audio_file = sr.AudioFile(wav_path)
         with audio_file as source:
             audio_data = recognizer.record(source)
         text = recognizer.recognize_google(audio_data)
+
+        # Remove temporary files
+        os.remove(file_path)
+        os.remove(wav_path)
 
         # Your OpenAI API key and organization
         openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
@@ -52,6 +62,8 @@ def upload():
         return render_template('result.html', result=corrected_text)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()  # Print the error traceback to the console
         return f"Error processing file: {str(e)}", 500
 
 if __name__ == '__main__':
