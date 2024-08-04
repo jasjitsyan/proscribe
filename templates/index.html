@@ -3,18 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proscribe</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Proscribe - Speech to Text AI Translation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+        }
+        .upload-area.dragover {
+            border-color: #000;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Proscribe</h1>
-        <h2>Revolutionary AI-Powered Speech-to-Text Translation Software for Medical Professionals</h2>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <label for="file">Upload Audio File:</label>
-            <input type="file" name="file" id="file" accept="audio/*" required>
-            <button type="submit">Upload and Process</button>
-        </form>
+        <h1>Proscribe - Speech to Text AI Translation</h1>
+        <div class="upload-area" id="upload-area">
+            <p>Drag & drop an audio file here or click to upload</p>
+            <input type="file" id="fileInput" accept="audio/*">
+        </div>
+        <button id="uploadBtn">Upload</button>
+        <div id="output"></div>
     </div>
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const output = document.getElementById('output');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            fileInput.files = e.dataTransfer.files;
+            uploadFile(file);
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                uploadFile(file);
+            } else {
+                alert('Please select a file first');
+            }
+        });
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'output.docx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                output.innerHTML = 'File processed successfully. Download will start shortly.';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                output.innerHTML = 'Error processing the file.';
+            });
+        }
+    </script>
 </body>
 </html>
