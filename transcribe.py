@@ -15,15 +15,6 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
-    # Process file (speech-to-text, ChatGPT, save as docx)
-    return "File processed successfully"
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['file']
     
     # Speech-to-text
     recognizer = sr.Recognizer()
@@ -43,13 +34,13 @@ def upload():
     supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
 
     # Open the most recent audio file and transcribe it
-    with open(audio_file, "rb") as f:
-    transcription = openai.Audio.transcribe("whisper-1", f)
+    with open(file, "rb") as f:
+        transcription = openai.Audio.transcribe("whisper-1", f)  # Assuming this is the correct OpenAI API call
     print(transcription)
     
     # System prompt
     system_prompt = """
-    You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and seperate them by commas. Format the 'Clinical Review' in paragraphs for readibility. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the begining or any signatures at the end.
+    You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP'. The 'Reason for Referral/Diagnosis' should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and separate them by commas. Format the 'Clinical Review' in paragraphs for readability. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the beginning or any signatures at the end.
     Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
     Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Arrhythmia clinic on behalf of Dr. today. [He/She] is a [age] year old patient...'
     At the end of the letter always finish with:
@@ -65,7 +56,7 @@ def upload():
 
     def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
         response = openai.ChatCompletion.create(
-            model="gpt-4o",
+            model="gpt-4",
             temperature=0.2,
             messages=[
                 {
@@ -81,7 +72,7 @@ def upload():
         return response.choices[0].message['content']
 
     # Example usage
-    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcribed_text)
+    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
     print(corrected_text)
 
     def set_paragraph_format(paragraph):
@@ -113,6 +104,15 @@ def upload():
             else:
                 paragraph = doc.add_paragraph(line)
                 set_paragraph_format(paragraph)
-        doc.save(doc_path)
-        
-        return send_file(doc_path, as_attachment=True)
+        doc.save(output_path)
+
+    # Save the corrected transcript to a Word document
+    output_path = os.path.join("uploads", "output.docx")
+    save_to_word(corrected_text, output_path)
+    
+    return send_file(output_path, as_attachment=True)
+
+if __name__ == '__main__':
+    if not os.path.exists('uploads'):
+        os.makedirs('uploads')
+    app.run(debug=True)
