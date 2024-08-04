@@ -36,7 +36,6 @@ def upload():
         # Open the most recent audio file and transcribe it
         with open(file_path, "rb") as f:
             transcription = openai.Audio.transcribe("whisper-1", f)
-        print(transcription)
 
         # System prompt
         system_prompt = """
@@ -63,7 +62,6 @@ def upload():
 
         # Example usage
         corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
-        print(corrected_text)
 
         def set_paragraph_format(paragraph):
             """Remove space after paragraph."""
