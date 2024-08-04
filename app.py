@@ -18,7 +18,10 @@ def upload():
     try:
         file = request.files['file']
         if file:
-            file_path = os.path.join("uploads", file.filename)
+            uploads_dir = 'uploads'
+            os.makedirs(uploads_dir, exist_ok=True)  # Ensure the directory exists
+
+            file_path = os.path.join(uploads_dir, file.filename)
             file.save(file_path)
 
             # Speech-to-text
