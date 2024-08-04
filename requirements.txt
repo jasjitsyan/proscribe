@@ -1,4 +1,5 @@
 Flask
 speechrecognition
 python-docx
+openai
 gunicorn
