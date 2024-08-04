@@ -1,5 +1,3 @@
-pip install flask speechrecognition python-docx openai
-
 from flask import Flask, request, send_file
 import speech_recognition as sr
 import os
