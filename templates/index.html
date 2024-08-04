@@ -84,7 +84,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                output.innerHTML = data.formatted_text;
+                if (data.error) {
+                    output.innerHTML = `Error: ${data.error}`;
+                } else {
+                    output.innerHTML = data.formatted_text;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
