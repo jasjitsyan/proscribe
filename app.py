@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import speech_recognition as sr
 import os
-from pathlib import Path
+from pydub import AudioSegment
 import openai
 import logging
 
@@ -24,9 +24,14 @@ def upload():
             file_path = os.path.join(uploads_dir, file.filename)
             file.save(file_path)
 
+            # Convert .m4a to .wav
+            wav_path = file_path.replace('.m4a', '.wav')
+            audio = AudioSegment.from_file(file_path)
+            audio.export(wav_path, format='wav')
+
             # Speech-to-text
             recognizer = sr.Recognizer()
-            audio_file = sr.AudioFile(file_path)
+            audio_file = sr.AudioFile(wav_path)
             with audio_file as source:
                 audio = recognizer.record(source)
             text = recognizer.recognize_google(audio)
