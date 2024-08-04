@@ -27,6 +27,12 @@
         .upload-area input[type="file"] {
             display: none;
         }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -76,17 +82,9 @@
                 method: 'POST',
                 body: formData,
             })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'output.docx';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                output.innerHTML = 'File processed successfully. Download will start shortly.';
+            .then(response => response.json())
+            .then(data => {
+                output.innerHTML = data.formatted_text;
             })
             .catch(error => {
                 console.error('Error:', error);
