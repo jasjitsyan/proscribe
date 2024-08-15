@@ -31,6 +31,14 @@ Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
 Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
 """
 
+def transcribe_audio(file_path):
+    with open(file_path, "rb") as audio_file:
+        transcript = openai.Audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+    return transcript['text']
+
 def generate_corrected_transcript(system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
         model="gpt-4",
@@ -91,13 +99,12 @@ def upload_file():
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            
-            # Open the uploaded audio file and transcribe it
-            with open(filepath, "rb") as f:
-                transcription = openai.Audio.transcribe("whisper-1", f)
-            
+
+            # Transcribe the uploaded audio file
+            transcribed_text = transcribe_audio(filepath)
+
             # Generate the corrected transcript
-            corrected_text = generate_corrected_transcript(system_prompt, transcription['text'])
+            corrected_text = generate_corrected_transcript(system_prompt, transcribed_text)
             
             # Save the corrected text to a Word document
             output_file = f"/tmp/corrected_transcript_{filename.split('.')[0]}.docx"
