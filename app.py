@@ -16,10 +16,10 @@ openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 def transcribe_audio(file_path):
-    with open(file_path, "rb") as f:
-        transcription = openai.Audio.transcribe("whisper-1", f)
-
-    return transcript['text']
+    audio_file = open(file_path, "rb")
+    response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
+    transcription = response['text']
+    return transcription
 
 # System prompt
 system_prompt = """
