@@ -5,6 +5,8 @@ import openai
 import os
 import traceback
 
+openai migrate
+
 app = Flask(__name__)
 
 @app.route('/')
