@@ -1,25 +1,25 @@
 import os
-from pathlib import Path
 from flask import Flask, request, render_template, send_file
 import openai
 from docx import Document
 from docx.shared import Pt
 from werkzeug.utils import secure_filename
+from openai import OpenAI
 
 # Configuration
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'  # Temporary storage for uploaded files
-openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
-openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
+
+# Initialize OpenAI client
+client = OpenAI()
 
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-def transcribe_audio(file_path):
-    audio_file = open(file_path, "rb")
-    response = openai.Audio.transcribe("whisper-1", file=audio_file)
-    transcription = response['text']
-    return transcription
+def transcribe_audio(audio_file_path):
+    with open(audio_file_path, 'rb') as audio_file:
+        transcription = client.audio.transcriptions.create("whisper-1", audio_file)
+    return transcription['text']
 
 # System prompt
 system_prompt = """
@@ -36,7 +36,6 @@ Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
 \n
 Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
 """
-
 
 def generate_corrected_transcript(system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
