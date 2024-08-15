@@ -1,19 +1,20 @@
-import os
 from flask import Flask, request, render_template, send_file
 import openai
 from docx import Document
 from docx.shared import Pt
 from werkzeug.utils import secure_filename
 from openai import OpenAI
+import os
 
 # Configuration
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'  # Temporary storage for uploaded files
 
-# Initialize OpenAI client
-client = OpenAI()
-openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
-openai_api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
+# Initialize OpenAI client with the API key from the environment variable or directly set
+api_key = os.getenv("sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable not set")
+client = OpenAI(api_key=api_key)
 
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
