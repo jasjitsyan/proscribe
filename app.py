@@ -32,6 +32,12 @@ def upload():
         with audio_file as source:
             audio_data = recognizer.record(source)
         text = recognizer.recognize_google(audio_data)
+        try:
+            text = recognizer.recognize_google(audio_data, timeout=30)
+        except sr.RequestError as e:
+            return f"Could not request results from Google Speech Recognition service; {e}", 500
+        except sr.UnknownValueError:
+            return "Google Speech Recognition could not understand audio", 500
 
         # Remove temporary files
         os.remove(file_path)
