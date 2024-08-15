@@ -17,7 +17,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 def transcribe_audio(file_path):
     audio_file = open(file_path, "rb")
-    response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
+    response = openai.Audio.transcribe("whisper-1", file=audio_file)
     transcription = response['text']
     return transcription
 
