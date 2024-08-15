@@ -16,7 +16,7 @@ openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 def transcribe_audio(file_path):
-    with open(audio_file_path, "rb") as f:
+    with open(file_path, "rb") as f:
         transcription = openai.Audio.transcribe("whisper-1", f)
 
     return transcript['text']
