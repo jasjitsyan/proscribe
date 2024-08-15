@@ -15,6 +15,12 @@ openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+def transcribe_audio(file_path):
+    with open(audio_file_path, "rb") as f:
+        transcription = openai.Audio.transcribe("whisper-1", f)
+
+    return transcript['text']
+
 # System prompt
 system_prompt = """
 You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and separate them by commas. Format the 'Clinical Review' in paragraphs for readability. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the beginning or any signatures at the end.
@@ -31,17 +37,10 @@ Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
 Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
 """
 
-def transcribe_audio(file_path):
-    with open(file_path, "rb") as audio_file:
-        transcript = openai.Audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file
-        )
-    return transcript['text']
 
 def generate_corrected_transcript(system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o",
         temperature=0.2,
         messages=[
             {
