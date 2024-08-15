@@ -10,8 +10,10 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'  # Temporary storage for uploaded files
 
 # Initialize OpenAI client with the API key and organization
-openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
-openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
+client = OpenAI(
+    api_key="sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS",
+    organization="org-yRlfrdqdXMIAYGfdaIqbyL28"
+)
 
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
