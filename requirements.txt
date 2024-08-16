@@ -8,3 +8,4 @@ ffmpeg-python
 pydub
 markupsafe==1.1.1
 Jinja2==2.11.3
+torch
