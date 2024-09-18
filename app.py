@@ -1,9 +1,8 @@
 import os
 from pathlib import Path
-from flask import Flask, request, render_template, jsonify, send_from_directory, make_response
+from flask import Flask, request, render_template, jsonify, make_response
 import openai
 from docx import Document
-import time
 from io import BytesIO
 
 # Initialize Flask app
@@ -48,7 +47,7 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     )
     return response.choices[0]['message']['content']
 
-def save_to_word(corrected_text, output_path=None):
+def save_to_word(corrected_text):
     doc = Document()
     lines = corrected_text.split('\n')
     for line in lines:
@@ -57,14 +56,11 @@ def save_to_word(corrected_text, output_path=None):
         else:
             doc.add_paragraph(line)
     
-    if output_path:
-        doc.save(output_path)
-    else:
-        # Create an in-memory BytesIO stream to return as file
-        doc_stream = BytesIO()
-        doc.save(doc_stream)
-        doc_stream.seek(0)
-        return doc_stream
+    # Create an in-memory BytesIO stream to return as file
+    doc_stream = BytesIO()
+    doc.save(doc_stream)
+    doc_stream.seek(0)
+    return doc_stream
 
 @app.route('/')
 def index():
