@@ -3,7 +3,6 @@ from pathlib import Path
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 import openai
 from docx import Document
-from docx.shared import Pt
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -22,19 +21,8 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 openai.api_key = openai_api_key
 
 system_prompt = """
-You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and seperate them by commas. Format the 'Clinical Review' in paragraphs for readibility. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the begining or any signatures at the end.
-Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
-Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Arrhythmia clinic on behalf of Dr. today. [He/She] is a [age] year old patient...'
-At the end of the letter always finish with:
-'###Signature'
-Dr. Jasjit Syan
-Cardiology Registrar
-\n
-Cardiology Department: Telephone: 020 8321 5336/Email: caw-tr.westmidadmin7@nhs.net
-Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
-\n
-Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
-"""
+You are a helpful assistant for a cardiology doctor...
+"""  # Your system prompt here
 
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
