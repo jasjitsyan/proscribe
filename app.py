@@ -12,6 +12,10 @@ app = Flask(__name__)
 AUDIO_DIR = Path("./audio")
 OUTPUT_DIR = Path("./text")
 
+@app.route('/')
+def index():
+    return "Welcome to the transcription app."
+
 # Ensure directories exist
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
