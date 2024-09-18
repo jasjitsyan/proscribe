@@ -68,11 +68,8 @@
             <h2 class="text-3xl font-bold mb-4">Transcribed Medical Letter</h2>
             <p id="transcribedText" class="text-left bg-white text-blue-900 p-4 rounded-md"></p>
             <div class="mt-4 flex justify-end space-x-4">
-                <button id="copyBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
-                    Copy to Clipboard
-                </button>
-                <button id="downloadBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
-                    Download as .txt
+                <button id="downloadDocxBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
+                    Download as .docx
                 </button>
             </div>
         </div>
@@ -88,8 +85,7 @@
         const resultSection = document.getElementById('resultSection');
         const transcribedTextElem = document.getElementById('transcribedText');
         const audioUpload = document.getElementById('audioUpload');
-        const copyBtn = document.getElementById('copyBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadDocxBtn = document.getElementById('downloadDocxBtn');
 
         audioUpload.addEventListener('change', async function() {
             const file = audioUpload.files[0];
@@ -108,9 +104,15 @@
                     const data = await response.json();
                     
                     if (response.ok) {
-                        transcribedTextElem.textContent = data.transcribedText;
+                        transcribedTextElem.textContent = "Transcription complete! Click the button below to download the document.";
                         processingSection.classList.add('hidden');
                         resultSection.classList.remove('hidden');
+                        
+                        // Enable download of .docx file
+                        const docxFile = data.docxFile;
+                        downloadDocxBtn.addEventListener('click', () => {
+                            window.location.href = `/download/${docxFile}`;
+                        });
                     } else {
                         alert('Error: ' + data.error);
                         uploadSection.classList.remove('hidden');
@@ -122,23 +124,6 @@
                     processingSection.classList.add('hidden');
                 }
             }
-        });
-
-        copyBtn.addEventListener('click', function() {
-            const text = transcribedTextElem.textContent;
-            navigator.clipboard.writeText(text);
-            alert('Copied to clipboard');
-        });
-
-        downloadBtn.addEventListener('click', function() {
-            const text = transcribedTextElem.textContent;
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'medical_letter.txt';
-            a.click();
-            URL.revokeObjectURL(url);
         });
     </script>
 </body>
