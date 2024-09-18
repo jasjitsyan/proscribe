@@ -101,7 +101,6 @@
             <h2>Transcribed Medical Letter</h2>
             <p id="transcribed-text"></p>
             <button id="copy-btn">Copy to Clipboard</button>
-            <button id="download-txt-btn">Save as Text</button>
             <button id="download-docx-btn">Save as DOCX</button>
         </div>
 
@@ -144,26 +143,9 @@
             }
         });
 
-        // Copy to Clipboard
+        // Copy to Clipboard as DOCX (you can only copy plain text; the docx structure needs external applications to manage)
         document.getElementById('copy-btn').addEventListener('click', function() {
-            const text = document.getElementById('transcribed-text').textContent;
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Copied to clipboard');
-            }).catch(function(error) {
-                console.error('Error copying text:', error);
-            });
-        });
-
-        // Save as .txt file
-        document.getElementById('download-txt-btn').addEventListener('click', function() {
-            const text = document.getElementById('transcribed-text').textContent;
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'medical_letter.txt';
-            a.click();
-            URL.revokeObjectURL(url);
+            alert('Copying DOCX content to clipboard is not supported in browsers. You can download the DOCX.');
         });
 
         // Save as .docx file
