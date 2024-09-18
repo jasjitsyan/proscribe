@@ -56,10 +56,8 @@ def save_to_word(corrected_text, output_path):
     doc.save(output_path)
 
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
-    # Since we're no longer using OpenAI API, you may need to adjust this function.
-    # If you still want to use ChatGPT for text correction, keep this function as is.
+    # If you still want to use ChatGPT for text correction
     import openai
-    openai.organization = os.getenv('OPENAI_ORGANIZATION')
     openai.api_key = os.getenv('OPENAI_API_KEY')
     response = openai.ChatCompletion.create(
         model="gpt-4",
@@ -79,7 +77,18 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
 
 # System prompt
 SYSTEM_PROMPT = """
-[Your system prompt here]
+You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis" should be a numbered list. The 'Medications' should be in a sentence, capitalize the first letter of the drug name, and separate them by commas. Format the 'Clinical Review' in paragraphs for readability. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the beginning or any signatures at the end.
+Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
+Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Arrhythmia clinic on behalf of Dr. today. [He/She] is a [age]-year-old patient...'
+At the end of the letter always finish with:
+'###Signature'
+Dr. Jasjit Syan
+Cardiology Registrar
+
+Cardiology Department: Telephone: 020 8321 5336/Email: caw-tr.westmidadmin7@nhs.net
+Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
+
+Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
 """
 
 @app.route('/')
@@ -98,9 +107,11 @@ def upload_file():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
-        # Transcribe audio using the whisper library
-        model = whisper.load_model('base')  # Consider using 'small' or 'base' model for resource constraints
-        result = model.transcribe(upload_path, language='en', verbose=False)
+        # Load the Whisper model
+        model = whisper.load_model('base')  # Use 'tiny' or 'base' for lower resource usage
+
+        # Transcribe audio using the Whisper library
+        result = model.transcribe(audio=upload_path, language='en', verbose=False)
         transcribed_text = result.get('text', '')
 
         # Generate corrected transcript using ChatGPT (if desired)
