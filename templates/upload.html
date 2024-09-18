@@ -100,8 +100,7 @@
         <div id="result" class="hidden">
             <h2>Transcribed Medical Letter</h2>
             <p id="transcribed-text"></p>
-            <button id="copy-btn">Copy to Clipboard</button>
-            <button id="download-docx-btn">Save as DOCX</button>
+            <button id="download-docx-btn">Download Word File</button>
         </div>
 
         <div class="footer">
@@ -141,11 +140,6 @@
                     processing.textContent = 'An error occurred. Please try again.';
                 });
             }
-        });
-
-        // Copy to Clipboard as DOCX (you can only copy plain text; the docx structure needs external applications to manage)
-        document.getElementById('copy-btn').addEventListener('click', function() {
-            alert('Copying DOCX content to clipboard is not supported in browsers. You can download the DOCX.');
         });
 
         // Save as .docx file
