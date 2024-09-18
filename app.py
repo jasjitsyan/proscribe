@@ -1,28 +1,49 @@
 import os
-from flask import Flask, render_template, request, send_file
-from werkzeug.utils import secure_filename
-import whisper
+from pathlib import Path
+from flask import Flask, request, jsonify, send_from_directory
+import openai
 from docx import Document
 from docx.shared import Pt
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-
+# Initialize Flask app
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['OUTPUT_FOLDER'] = 'outputs'
-app.config['ALLOWED_EXTENSIONS'] = {
-    'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'
-}
 
-# Ensure that the directories exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+# Configuration and paths
+AUDIO_DIR = Path("./audio")
+OUTPUT_DIR = Path("./text")
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+# Ensure directories exist
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# OpenAI API setup
+openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
+openai_api_key = os.getenv("sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS")
+openai.api_key = openai_api_key
+
+system_prompt = """
+You are a helpful assistant for a cardiology doctor...
+"""  # Your system prompt here
+
+def find_most_recent_file(directory, supported_formats):
+    """Find the most recent file in the given directory with a supported format."""
+    files = list(directory.glob('*'))
+    files = [f for f in files if f.is_file() and f.suffix[1:] in supported_formats]
+    if not files:
+        raise FileNotFoundError("No supported audio files found in the directory.")
+    most_recent_file = max(files, key=os.path.getmtime)
+    return most_recent_file
+
+def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        temperature=temperature,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": transcribed_text}
+        ]
+    )
+    return response.choices[0]['message']['content']
 
 def set_paragraph_format(paragraph):
     """Remove space after paragraph."""
@@ -41,101 +62,45 @@ def save_to_word(corrected_text, output_path):
     doc = Document()
     lines = corrected_text.split('\n')
     for line in lines:
-        if line.startswith('###'):  # Heading level 3
+        if line.startswith('###'):
             add_bold_underline_heading(doc, line[3:].strip(), level=3)
-        elif line.startswith('##'):  # Heading level 2
+        elif line.startswith('##'):
             add_bold_underline_heading(doc, line[2:].strip(), level=2)
-        elif line.startswith('#'):  # Heading level 1
+        elif line.startswith('#'):
             add_bold_underline_heading(doc, line[1:].strip(), level=1)
-        elif line.startswith('- '):  # Bullet points
-            paragraph = doc.add_paragraph(line, style='ListBullet')
-            set_paragraph_format(paragraph)
         else:
             paragraph = doc.add_paragraph(line)
             set_paragraph_format(paragraph)
     doc.save(output_path)
 
-def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
-    # If you still want to use ChatGPT for text correction
-    import openai
-    openai.api_key = os.getenv('OPENAI_API_KEY')
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        temperature=temperature,
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": transcribed_text
-            }
-        ]
-    )
-    return response.choices[0].message['content']
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    if 'audio_file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    audio_file = request.files['audio_file']
+    supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+    
+    if audio_file.filename.split('.')[-1] not in supported_formats:
+        return jsonify({'error': 'Unsupported file format'}), 400
+    
+    # Save the audio file
+    audio_file_path = AUDIO_DIR / audio_file.filename
+    audio_file.save(audio_file_path)
 
-# System prompt
-SYSTEM_PROMPT = """
-You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis" should be a numbered list. The 'Medications' should be in a sentence, capitalize the first letter of the drug name, and separate them by commas. Format the 'Clinical Review' in paragraphs for readability. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the beginning or any signatures at the end.
-Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
-Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Arrhythmia clinic on behalf of Dr. today. [He/She] is a [age]-year-old patient...'
-At the end of the letter always finish with:
-'###Signature'
-Dr. Jasjit Syan
-Cardiology Registrar
+    # Open the most recent audio file and transcribe it
+    with open(audio_file_path, "rb") as f:
+        transcription = openai.Audio.transcribe("whisper-1", f)
 
-Cardiology Department: Telephone: 020 8321 5336/Email: caw-tr.westmidadmin7@nhs.net
-Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
+    # Generate corrected transcript
+    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
 
-Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
-"""
+    # Save to Word file
+    output_file = OUTPUT_DIR / f"corrected_transcript_{audio_file_path.stem}.docx"
+    save_to_word(corrected_text, output_file)
 
-@app.route('/')
-def upload_form():
-    return render_template('index.html', title='Proscribe')
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'audiofile' not in request.files:
-        return 'No file part'
-    file = request.files['audiofile']
-    if file.filename == '':
-        return 'No selected file'
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(upload_path)
-
-        # Load the Whisper model
-        model = whisper.load_model('base')  # Use 'tiny' or 'base' for lower resource usage
-
-        # Transcribe audio using the Whisper library
-        result = model.transcribe(audio=upload_path, language='en', verbose=False)
-        transcribed_text = result.get('text', '')
-
-        # Generate corrected transcript using ChatGPT (if desired)
-        corrected_text = generate_corrected_transcript(
-            temperature=0.2,
-            system_prompt=SYSTEM_PROMPT,
-            transcribed_text=transcribed_text
-        )
-
-        # Save the corrected text to a Word document
-        output_filename = os.path.splitext(filename)[0] + '.docx'
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-        save_to_word(corrected_text, output_path)
-
-        return render_template('result.html', filename=output_filename)
-    else:
-        return 'Invalid file type'
-
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_file(
-        os.path.join(app.config['OUTPUT_FOLDER'], filename),
-        as_attachment=True
-    )
+    # Send back the corrected transcript in the response
+    return send_from_directory(OUTPUT_DIR, output_file.name, as_attachment=True)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
