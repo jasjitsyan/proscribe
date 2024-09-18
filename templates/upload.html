@@ -1,88 +1,169 @@
-import os
-from pathlib import Path
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory
-import openai
-from docx import Document
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proscribe - Audio Transcription</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background-color: #001f3f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: radial-gradient(#888, #001f3f 1px, #001f3f 2px);
+            background-size: 20px 20px;
+        }
 
-# Initialize Flask app
-app = Flask(__name__)
+        .container {
+            text-align: center;
+            padding: 50px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
 
-# Configuration and paths
-AUDIO_DIR = Path("./audio")
-OUTPUT_DIR = Path("./text")
+        h1 {
+            font-size: 2.5rem;
+            color: #001f3f;
+            margin-bottom: 20px;
+        }
 
-# Ensure directories exist
-AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        p {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
 
-# OpenAI API setup
-openai.api_key = os.getenv("OPENAI_API_KEY")
+        input[type="file"] {
+            padding: 10px;
+            background-color: #001f3f;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
 
-system_prompt = """
-You are a helpful assistant for a cardiology doctor...
-"""
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
 
-def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": transcribed_text}
-        ]
-    )
-    return response.choices[0]['message']['content']
+        button:hover {
+            background-color: #0056b3;
+        }
 
-def save_to_word(corrected_text, output_path):
-    doc = Document()
-    lines = corrected_text.split('\n')
-    for line in lines:
-        if line.startswith('###'):
-            doc.add_heading(line[3:].strip(), level=3)
-        elif line.startswith('##'):
-            doc.add_heading(line[2:].strip(), level=2)
-        elif line.startswith('#'):
-            doc.add_heading(line[1:].strip(), level=1)
-        else:
-            doc.add_paragraph(line)
-    doc.save(output_path)
+        .logo {
+            font-size: 3rem;
+            color: #001f3f;
+            font-weight: 600;
+        }
 
-@app.route('/')
-def index():
-    return render_template('upload.html')
+        .footer {
+            margin-top: 30px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe_audio():
-    if 'audio_file' not in request.files:
-        return 'No file part', 400
-    
-    audio_file = request.files['audio_file']
-    supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
-    
-    if audio_file.filename.split('.')[-1] not in supported_formats:
-        return 'Unsupported file format', 400
-    
-    # Save the audio file
-    audio_file_path = AUDIO_DIR / audio_file.filename
-    audio_file.save(audio_file_path)
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Proscribe</div>
+        <h1>Audio Transcription</h1>
+        <p>Upload an audio file to get started with the transcription.</p>
+        <form id="upload-form">
+            <input type="file" name="audio_file" id="audio-file" accept="audio/*" required>
+            <br><br>
+            <button type="submit">Upload</button>
+        </form>
 
-    # Open the most recent audio file and transcribe it
-    with open(audio_file_path, "rb") as f:
-        transcription = openai.Audio.transcribe("whisper-1", f)
+        <div id="processing" class="hidden">
+            <p>Processing audio... Please wait.</p>
+        </div>
 
-    # Generate corrected transcript
-    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
+        <div id="result" class="hidden">
+            <h2>Transcribed Medical Letter</h2>
+            <p id="transcribed-text"></p>
+            <button id="copy-btn">Copy to Clipboard</button>
+            <button id="download-btn">Save Document</button>
+        </div>
 
-    # Save to Word file
-    output_file = OUTPUT_DIR / f"corrected_transcript_{audio_file.filename.split('.')[0]}.docx"
-    save_to_word(corrected_text, output_file)
+        <div class="footer">
+            <p>&copy; 2024 Proscribe. All rights reserved. <br> Created by Jasjit Syan</p>
+        </div>
+    </div>
 
-    # Provide the download link for the generated Word document
-    return redirect(url_for('download_file', filename=output_file.name))
+    <script>
+        const form = document.getElementById('upload-form');
+        const processing = document.getElementById('processing');
+        const result = document.getElementById('result');
+        const transcribedTextElem = document.getElementById('transcribed-text');
 
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(OUTPUT_DIR, filename, as_attachment=True)
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('audio-file');
+            const file = fileInput.files[0];
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+            if (file) {
+                processing.classList.remove('hidden');
+
+                const formData = new FormData();
+                formData.append('audio_file', file);
+
+                fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processing.classList.add('hidden');
+                    result.classList.remove('hidden');
+                    transcribedTextElem.textContent = data.transcribedText;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    processing.textContent = 'An error occurred. Please try again.';
+                });
+            }
+        });
+
+        // Copy to Clipboard
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            const text = document.getElementById('transcribed-text').textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Copied to clipboard');
+            }).catch(function(error) {
+                console.error('Error copying text:', error);
+            });
+        });
+
+        // Save as document
+        document.getElementById('download-btn').addEventListener('click', function() {
+            const text = document.getElementById('transcribed-text').textContent;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'medical_letter.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
