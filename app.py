@@ -3,7 +3,6 @@ from pathlib import Path
 from flask import Flask, request, render_template, jsonify, send_from_directory
 import openai
 from docx import Document
-import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -47,20 +46,6 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     )
     return response.choices[0]['message']['content']
 
-def save_to_word(corrected_text, output_path):
-    doc = Document()
-    lines = corrected_text.split('\n')
-    for line in lines:
-        if line.startswith('###'):
-            doc.add_heading(line[3:].strip(), level=3)
-        elif line.startswith('##'):
-            doc.add_heading(line[2:].strip(), level=2)
-        elif line.startswith('#'):
-            doc.add_heading(line[1:].strip(), level=1)
-        else:
-            doc.add_paragraph(line)
-    doc.save(output_path)
-
 @app.route('/')
 def index():
     return render_template('upload.html')
@@ -74,17 +59,15 @@ def transcribe_audio():
     audio_file_path = AUDIO_DIR / audio_file.filename
     audio_file.save(audio_file_path)
 
-    # Simulate transcription processing time (in real scenario, use OpenAI's API)
-    time.sleep(3)  # simulate processing time
+    # Use OpenAI Whisper to transcribe the audio
+    with open(audio_file_path, 'rb') as f:
+        transcription = openai.Audio.transcribe("whisper-1", f)
+    
+    # Now use GPT to format the transcription
+    transcribed_text = transcription['text']
+    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcribed_text)
 
-    # In a real scenario, get transcription from OpenAI's API
-    transcribed_text = "This is a sample transcribed medical letter. Replace this with actual transcribed text."
-
-    return jsonify({'transcribedText': transcribed_text})
-
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(OUTPUT_DIR, filename, as_attachment=True)
+    return jsonify({'transcribedText': corrected_text})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
