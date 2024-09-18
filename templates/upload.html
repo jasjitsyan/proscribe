@@ -5,76 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proscribe - Audio Transcription</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
             height: 100%;
             margin: 0;
             font-family: 'Poppins', sans-serif;
-            background-color: #001f3f;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            background-image: radial-gradient(#888, #001f3f 1px, #001f3f 2px);
-            background-size: 20px 20px;
+            color: white;
         }
 
         .container {
             text-align: center;
             padding: 50px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
             width: 100%;
         }
 
-        h1 {
-            font-size: 2.5rem;
-            color: #001f3f;
-            margin-bottom: 20px;
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
 
-        p {
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 1.1rem;
-        }
-
-        input[type="file"] {
-            padding: 10px;
-            background-color: #001f3f;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .logo {
-            font-size: 3rem;
-            color: #001f3f;
-            font-weight: 600;
-        }
-
-        .footer {
-            margin-top: 30px;
-            color: #aaa;
-            font-size: 0.9rem;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .hidden {
@@ -84,78 +49,89 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">Proscribe</div>
-        <h1>Audio Transcription</h1>
-        <p>Upload an audio file to get started with the transcription.</p>
-        <form id="upload-form">
-            <input type="file" name="audio_file" id="audio-file" accept="audio/*" required>
-            <br><br>
-            <button type="submit">Upload</button>
-        </form>
+        <h1 class="text-5xl font-bold mb-4">Proscribe</h1>
+        <p class="mb-8 text-xl text-gray-200">Convert your audio to a professional medical letter in seconds.</p>
+        
+        <div id="uploadSection">
+            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                <input type="file" id="audioUpload" class="hidden" accept="audio/*">
+                <span>Select Audio File</span>
+            </label>
+        </div>
 
-        <div id="processing" class="hidden">
+        <div id="processingSection" class="hidden">
+            <div class="loader"></div>
             <p>Processing audio... Please wait.</p>
         </div>
 
-        <div id="result" class="hidden">
-            <h2>Transcribed Medical Letter</h2>
-            <p id="transcribed-text"></p>
-            <button id="copy-btn">Copy to Clipboard</button>
-            <button id="download-btn">Save Document</button>
+        <div id="resultSection" class="hidden mt-6">
+            <h2 class="text-3xl font-bold mb-4">Transcribed Medical Letter</h2>
+            <p id="transcribedText" class="text-left bg-white text-blue-900 p-4 rounded-md"></p>
+            <div class="mt-4 flex justify-end space-x-4">
+                <button id="copyBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
+                    Copy to Clipboard
+                </button>
+                <button id="downloadBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
+                    Download as .txt
+                </button>
+            </div>
         </div>
 
-        <div class="footer">
-            <p>&copy; 2024 Proscribe. All rights reserved. <br> Created by Jasjit Syan</p>
+        <div class="mt-8 text-gray-400 text-sm">
+            Created by Jasjit Syan
         </div>
     </div>
 
     <script>
-        const form = document.getElementById('upload-form');
-        const processing = document.getElementById('processing');
-        const result = document.getElementById('result');
-        const transcribedTextElem = document.getElementById('transcribed-text');
+        const uploadSection = document.getElementById('uploadSection');
+        const processingSection = document.getElementById('processingSection');
+        const resultSection = document.getElementById('resultSection');
+        const transcribedTextElem = document.getElementById('transcribedText');
+        const audioUpload = document.getElementById('audioUpload');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
 
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const fileInput = document.getElementById('audio-file');
-            const file = fileInput.files[0];
-
+        audioUpload.addEventListener('change', async function() {
+            const file = audioUpload.files[0];
             if (file) {
-                processing.classList.remove('hidden');
-
+                uploadSection.classList.add('hidden');
+                processingSection.classList.remove('hidden');
+                
                 const formData = new FormData();
                 formData.append('audio_file', file);
-
-                fetch('/transcribe', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    processing.classList.add('hidden');
-                    result.classList.remove('hidden');
-                    transcribedTextElem.textContent = data.transcribedText;
-                })
-                .catch(error => {
+                
+                try {
+                    const response = await fetch('/transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        transcribedTextElem.textContent = data.transcribedText;
+                        processingSection.classList.add('hidden');
+                        resultSection.classList.remove('hidden');
+                    } else {
+                        alert('Error: ' + data.error);
+                        uploadSection.classList.remove('hidden');
+                        processingSection.classList.add('hidden');
+                    }
+                } catch (error) {
                     console.error('Error:', error);
-                    processing.textContent = 'An error occurred. Please try again.';
-                });
+                    uploadSection.classList.remove('hidden');
+                    processingSection.classList.add('hidden');
+                }
             }
         });
 
-        // Copy to Clipboard
-        document.getElementById('copy-btn').addEventListener('click', function() {
-            const text = document.getElementById('transcribed-text').textContent;
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Copied to clipboard');
-            }).catch(function(error) {
-                console.error('Error copying text:', error);
-            });
+        copyBtn.addEventListener('click', function() {
+            const text = transcribedTextElem.textContent;
+            navigator.clipboard.writeText(text);
+            alert('Copied to clipboard');
         });
 
-        // Save as document
-        document.getElementById('download-btn').addEventListener('click', function() {
-            const text = document.getElementById('transcribed-text').textContent;
+        downloadBtn.addEventListener('click', function() {
+            const text = transcribedTextElem.textContent;
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
