@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, send_file
 import os
+from flask import Flask, render_template, request, send_file
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import openai
@@ -15,14 +15,17 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'outputs'
-app.config['ALLOWED_EXTENSIONS'] = {'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'}
+app.config['ALLOWED_EXTENSIONS'] = {
+    'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'
+}
 
-# Supported audio formats for transcription
-SUPPORTED_FORMATS = app.config['ALLOWED_EXTENSIONS']
+# Ensure that the directories exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in SUPPORTED_FORMATS
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def set_paragraph_format(paragraph):
     """Remove space after paragraph."""
@@ -72,9 +75,9 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     )
     return response.choices[0].message['content']
 
-# System prompt from your code
+# System prompt
 SYSTEM_PROMPT = """
-You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and seperate them by commas. Format the 'Clinical Review' in paragraphs for readibility. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the begining or any signatures at the end.
+You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and separate them by commas. Format the 'Clinical Review' in paragraphs for readability. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the beginning or any signatures at the end.
 Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
 Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Arrhythmia clinic on behalf of Dr. today. [He/She] is a [age] year old patient...'
 At the end of the letter always finish with:
@@ -104,11 +107,11 @@ def upload_file():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
-        # Transcribe audio using Whisper via OpenAI API
+        # Transcribe audio using OpenAI Whisper API
         with open(upload_path, "rb") as f:
-            transcription_response = openai.Audio.transcribe("whisper-1", f)
-            transcribed_text = transcription_response['text']
-        
+            transcription = openai.Audio.transcribe("whisper-1", f)
+            transcribed_text = transcription['text']
+
         # Generate corrected transcript using ChatGPT
         corrected_text = generate_corrected_transcript(
             temperature=0.2,
@@ -127,9 +130,10 @@ def upload_file():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    return send_file(os.path.join(app.config['OUTPUT_FOLDER'], filename), as_attachment=True)
+    return send_file(
+        os.path.join(app.config['OUTPUT_FOLDER'], filename),
+        as_attachment=True
+    )
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
-    app.run(debug=True)
+    app.run()  # Remove debug=True for production
