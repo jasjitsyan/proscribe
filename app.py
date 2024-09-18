@@ -18,12 +18,13 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # Set OpenAI organization
 openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
 
-# Use the environment variable for the API key
-openai.api_key = os.getenv("OPENAI_API_KEY")  # This will get the key from the environment
+# Get the OpenAI API key from environment variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Check if the API key is retrieved successfully
-if openai.api_key is None:
-    raise ValueError("OpenAI API key is not set. Make sure 'OPENAI_API_KEY' is set in the environment variables.")
+# Raise an error if the API key is not found
+if not openai.api_key:
+    raise ValueError("OpenAI API key is not set. Please set the 'OPENAI_API_KEY' environment variable.")
+    
 system_prompt = """
 You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and seperate them by commas. Format the 'Clinical Review' in paragraphs for readibility. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the begining or any signatures at the end.
 Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
