@@ -28,6 +28,13 @@
             width: 100%;
         }
 
+        .logo-img {
+            width: 75%;  /* Reduce size by 75% */
+            max-width: 200px;  /* Optional max-width to limit the image size */
+            height: auto;  /* Maintain aspect ratio */
+            margin-bottom: 20px;
+        }
+
         h1 {
             font-size: 2.5rem;
             color: #001f3f;
@@ -65,12 +72,6 @@
             background-color: #0056b3;
         }
 
-        .logo {
-            font-size: 3rem;
-            color: #001f3f;
-            font-weight: 600;
-        }
-
         .footer {
             margin-top: 30px;
             color: #aaa;
@@ -84,7 +85,10 @@
 </head>
 <body>
     <div class="container">
+        <!-- Insert the logo image and apply the class for resizing -->
         <img src="static/images/logo.png" alt="Proscribe Logo" class="logo-img">
+
+        <div class="logo">Proscribe</div>
         <h2>Seamlessly transcribe audio into a formatted clinic letter in seconds.</h2>
         <p>Upload an audio file to get started with the transcription.</p>
         <form id="upload-form">
@@ -100,7 +104,7 @@
         <div id="result" class="hidden">
             <h2>Transcribed Medical Letter</h2>
             <p id="transcribed-text"></p>
-            <button id="download-docx-btn">Download Word File</button>
+            <button id="download-docx-btn">Save as DOCX</button>
         </div>
 
         <div class="footer">
