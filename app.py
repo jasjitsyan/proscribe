@@ -37,7 +37,7 @@ Disclaimer: This document has been transcribed from dictation; we apologize for 
 
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o",
         temperature=temperature,
         messages=[
             {"role": "system", "content": system_prompt},
