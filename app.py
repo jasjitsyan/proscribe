@@ -5,8 +5,6 @@ import openai
 from docx import Document
 from docx.shared import Pt
 from io import BytesIO
-import time
-from concurrent.futures import ThreadPoolExecutor
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -39,11 +37,7 @@ Appointments: 020 8321 5610 Email: caw-tr.wm-bookingenquiries@nhs.net
 Disclaimer: This document has been transcribed from dictation; we apologize for any unintentional spelling mistakes/errors due to the voice recognition software.
 """
 
-# Thread pool for asynchronous tasks
-executor = ThreadPoolExecutor()
-
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
-    # Using OpenAI GPT model to correct transcript
     response = openai.ChatCompletion.create(
         model="gpt-4",
         temperature=temperature,
@@ -55,10 +49,9 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     return response.choices[0]['message']['content']
 
 def save_to_word(corrected_text):
-    # Create a DOCX in memory
     doc = Document()
     lines = corrected_text.split('\n')
-    
+
     for line in lines:
         if line.startswith('###'):
             doc.add_heading(line[3:].strip(), level=3)
@@ -68,17 +61,11 @@ def save_to_word(corrected_text):
             paragraph_format = paragraph.paragraph_format
             paragraph_format.space_after = Pt(0)
     
-    # Save DOCX to a BytesIO stream
+    # Create an in-memory BytesIO stream to return as file
     doc_stream = BytesIO()
     doc.save(doc_stream)
     doc_stream.seek(0)
     return doc_stream
-
-def transcribe_audio_in_background(audio_file_path):
-    """Handles transcription asynchronously."""
-    with open(audio_file_path, 'rb') as f:
-        transcript = openai.Audio.transcribe("whisper-1", f)
-    return transcript['text']
 
 @app.route('/')
 def index():
@@ -93,11 +80,12 @@ def transcribe_audio():
     audio_file_path = AUDIO_DIR / audio_file.filename
     audio_file.save(audio_file_path)
 
-    # Asynchronous transcription using ThreadPoolExecutor
-    future = executor.submit(transcribe_audio_in_background, audio_file_path)
-
+    # Perform transcription using OpenAI's Whisper API
     try:
-        transcribed_text = future.result(timeout=60)  # Timeout after 60 seconds
+        with open(audio_file_path, 'rb') as f:
+            transcript = openai.Audio.transcribe("whisper-1", f)
+
+        transcribed_text = transcript['text']
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -108,10 +96,9 @@ def download_docx():
     transcribed_text = request.form['transcribed_text']
     corrected_text = generate_corrected_transcript(0.7, system_prompt, transcribed_text)
 
-    # Generate DOCX in memory
+    # Save to DOCX in-memory and return as file
     doc_stream = save_to_word(corrected_text)
     
-    # Create and return the response
     response = make_response(doc_stream.read())
     response.headers.set('Content-Disposition', 'attachment', filename='medical_letter.docx')
     response.headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
@@ -119,5 +106,4 @@ def download_docx():
     return response
 
 if __name__ == '__main__':
-    # Run with multiple workers for better concurrency
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), threaded=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
