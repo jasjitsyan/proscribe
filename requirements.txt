@@ -1,6 +1,7 @@
 Flask
-whisper
+gunicorn
 openai
 python-docx
 python-dotenv
-gunicorn
+Werkzeug
+docx
