@@ -1,7 +1,6 @@
 import os
 from flask import Flask, render_template, request, send_file
 from werkzeug.utils import secure_filename
-from pathlib import Path
 import openai
 from docx import Document
 from docx.shared import Pt
@@ -107,13 +106,10 @@ def upload_file():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
-        # Transcribe audio using the updated OpenAI Whisper API
-        audio_file = open(upload_path, "rb")
-        transcription = openai.Audio.create_transcription(
-            file=audio_file,
-            model="whisper-1"
-        )
-        transcribed_text = transcription['text']
+        # Transcribe audio using OpenAI Whisper API
+        with open(upload_path, "rb") as audio_file:
+            transcription = openai.Audio.transcribe("whisper-1", audio_file)
+            transcribed_text = transcription['text']
 
         # Generate corrected transcript using ChatGPT
         corrected_text = generate_corrected_transcript(
@@ -139,4 +135,4 @@ def download_file(filename):
     )
 
 if __name__ == '__main__':
-    app.run()  # Remove debug=True for production
+    app.run()
