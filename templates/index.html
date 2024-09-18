@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Audio File</title>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Upload Audio File</h1>
+    <h1>{{ title }}</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="audio/*" required>
-        <button type="submit">Upload</button>
+        <label for="audiofile">Select Audio File:</label>
+        <input type="file" name="audiofile" id="audiofile" accept=".wav, .mp3, .m4a" required>
+        <button type="submit">Upload and Process</button>
     </form>
 </body>
 </html>
