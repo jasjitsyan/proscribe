@@ -1,2 +1,13 @@
-/Library/
-/Pictures/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+
+# Uploaded files
+uploads/
+outputs/
