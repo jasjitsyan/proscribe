@@ -105,7 +105,7 @@
         </div>
 
         <div class="footer">
-            <p>&copy; 2024 Proscribe. All rights reserved.</p>
+            <p>&copy; 2024 Proscribe. All rights reserved. <br> Created by Jasjit Syan</p>
         </div>
     </div>
 
@@ -138,6 +138,7 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    processing.textContent = 'An error occurred. Please try again.';
                 });
             }
         });
@@ -145,8 +146,11 @@
         // Copy to Clipboard
         document.getElementById('copy-btn').addEventListener('click', function() {
             const text = document.getElementById('transcribed-text').textContent;
-            navigator.clipboard.writeText(text);
-            alert('Copied to clipboard');
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Copied to clipboard');
+            }).catch(function(error) {
+                console.error('Error copying text:', error);
+            });
         });
 
         // Save as document
