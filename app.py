@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_from_directory, make_response
 import openai
 from docx import Document
 import time
+from io import BytesIO
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -47,19 +48,23 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     )
     return response.choices[0]['message']['content']
 
-def save_to_word(corrected_text, output_path):
+def save_to_word(corrected_text, output_path=None):
     doc = Document()
     lines = corrected_text.split('\n')
     for line in lines:
         if line.startswith('###'):
             doc.add_heading(line[3:].strip(), level=3)
-        elif line.startswith('##'):
-            doc.add_heading(line[2:].strip(), level=2)
-        elif line.startswith('#'):
-            doc.add_heading(line[1:].strip(), level=1)
         else:
             doc.add_paragraph(line)
-    doc.save(output_path)
+    
+    if output_path:
+        doc.save(output_path)
+    else:
+        # Create an in-memory BytesIO stream to return as file
+        doc_stream = BytesIO()
+        doc.save(doc_stream)
+        doc_stream.seek(0)
+        return doc_stream
 
 @app.route('/')
 def index():
@@ -85,9 +90,19 @@ def transcribe_audio():
 
     return jsonify({'transcribedText': transcribed_text})
 
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(OUTPUT_DIR, filename, as_attachment=True)
+@app.route('/download-docx', methods=['POST'])
+def download_docx():
+    transcribed_text = request.form['transcribed_text']
+    corrected_text = generate_corrected_transcript(0.7, system_prompt, transcribed_text)
+
+    # Save to DOCX in-memory and return as file
+    doc_stream = save_to_word(corrected_text)
+    
+    response = make_response(doc_stream.read())
+    response.headers.set('Content-Disposition', 'attachment', filename='medical_letter.docx')
+    response.headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
