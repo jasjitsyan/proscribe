@@ -3,3 +3,4 @@ whisper
 openai
 python-docx
 python-dotenv
+gunicorn
