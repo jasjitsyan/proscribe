@@ -15,12 +15,10 @@ OUTPUT_DIR = Path("./text")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Set OpenAI organization
-openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
+# OpenAI API setup
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Hardcode the API key (not recommended for production)
-openai.api_key = "sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
-    
+# System prompt for OpenAI
 system_prompt = """
 You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies, using English UK, in the transcribed text. Maintain accuracy of the transcription and use only context provided. Format the output into a medical letter under the following headings: '###Reason for Referral/Diagnosis', '###Medications', '###Clinical Review', '###Diagnostic Tests', '###Plan', and '###Actions for GP' The "Reason for Referral/Diagnosis should be a numbered list. The 'Medications' should be in a sentence, capitalise the first letter of the drug name and seperate them by commas. Format the 'Clinical Review' in paragraphs for readibility. Always leave the 'Diagnostic Tests' blank. Do not add any address options at the begining or any signatures at the end.
 Important not to redact the plan from the clinical review. Keep the accurate prose plan in the clinical review, and also create a list of points for the 'Plan' and 'Actions for GP'.
@@ -38,7 +36,7 @@ Disclaimer: This document has been transcribed from dictation; we apologize for 
 
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
     response = openai.ChatCompletion.create(
-        model="gpt-4o",
+        model="gpt-4",
         temperature=temperature,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -69,30 +67,35 @@ def index():
 def transcribe_audio():
     if 'audio_file' not in request.files:
         return 'No file part', 400
-    
+
     audio_file = request.files['audio_file']
     supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
     
+    # Check file extension
     if audio_file.filename.split('.')[-1] not in supported_formats:
         return 'Unsupported file format', 400
     
     # Save the audio file
     audio_file_path = AUDIO_DIR / audio_file.filename
     audio_file.save(audio_file_path)
-
-    # Open the most recent audio file and transcribe it
-    with open(audio_file_path, "rb") as f:
-        transcription = openai.Audio.transcribe("whisper-1", f)
-
-    # Generate corrected transcript
-    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
-
-    # Save to Word file
-    output_file = OUTPUT_DIR / f"corrected_transcript_{audio_file.filename.split('.')[0]}.docx"
-    save_to_word(corrected_text, output_file)
-
-    # Provide the download link for the generated Word document
-    return redirect(url_for('download_file', filename=output_file.name))
+    
+    try:
+        # Open and transcribe the audio file
+        with open(audio_file_path, "rb") as f:
+            transcription = openai.Audio.transcribe("whisper-1", f)
+        
+        # Generate corrected transcript
+        corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
+        
+        # Save to Word file
+        output_file = OUTPUT_DIR / f"corrected_transcript_{audio_file.filename.split('.')[0]}.docx"
+        save_to_word(corrected_text, output_file)
+        
+        # Redirect to download the file
+        return redirect(url_for('download_file', filename=output_file.name))
+    
+    except Exception as e:
+        return f"An error occurred during transcription: {str(e)}", 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -100,4 +103,3 @@ def download_file(filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
