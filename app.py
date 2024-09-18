@@ -7,7 +7,7 @@ from docx import Document
 app = Flask(__name__)
 
 # Ensure the OpenAI API key is available
-openai.api_key = os.getenv('Osk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS')
+openai.api_key = os.getenv('sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS')
 
 # Directories for uploads and output
 AUDIO_DIR = Path('./audio')
@@ -52,7 +52,7 @@ def transcribe_audio():
 
         # Use GPT to format transcribed text into a medical letter
         response = openai.ChatCompletion.create(
-            model="gpt-4o",
+            model="gpt-4",
             temperature=0.2,
             messages=[
                 {"role": "system", "content": system_prompt},
