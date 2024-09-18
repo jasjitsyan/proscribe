@@ -101,7 +101,8 @@
             <h2>Transcribed Medical Letter</h2>
             <p id="transcribed-text"></p>
             <button id="copy-btn">Copy to Clipboard</button>
-            <button id="download-btn">Save Document</button>
+            <button id="download-txt-btn">Save as Text</button>
+            <button id="download-docx-btn">Save as DOCX</button>
         </div>
 
         <div class="footer">
@@ -153,8 +154,8 @@
             });
         });
 
-        // Save as document
-        document.getElementById('download-btn').addEventListener('click', function() {
+        // Save as .txt file
+        document.getElementById('download-txt-btn').addEventListener('click', function() {
             const text = document.getElementById('transcribed-text').textContent;
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
@@ -163,6 +164,30 @@
             a.download = 'medical_letter.txt';
             a.click();
             URL.revokeObjectURL(url);
+        });
+
+        // Save as .docx file
+        document.getElementById('download-docx-btn').addEventListener('click', function() {
+            const text = document.getElementById('transcribed-text').textContent;
+            const formData = new FormData();
+            formData.append('transcribed_text', text);
+
+            fetch('/download-docx', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'medical_letter.docx';
+                a.click();
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         });
     </script>
 </body>
