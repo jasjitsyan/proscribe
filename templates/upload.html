@@ -3,14 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Transcription</title>
+    <title>Proscribe - Audio Transcription</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background-color: #001f3f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: radial-gradient(#888, #001f3f 1px, #001f3f 2px);
+            background-size: 20px 20px;
+        }
+
+        .container {
+            text-align: center;
+            padding: 50px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #001f3f;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            background-color: #001f3f;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .logo {
+            font-size: 3rem;
+            color: #001f3f;
+            font-weight: 600;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload an audio file for transcription</h1>
-    <form action="/transcribe" method="post" enctype="multipart/form-data">
-        <label for="audio_file">Choose an audio file:</label>
-        <input type="file" id="audio_file" name="audio_file" accept="audio/*" required>
-        <button type="submit">Upload</button>
-    </form>
+    <div class="container">
+        <div class="logo">Proscribe</div>
+        <h1>Audio Transcription</h1>
+        <p>Upload an audio file to get started with the transcription.</p>
+        <form action="/transcribe" method="post" enctype="multipart/form-data">
+            <input type="file" name="audio_file" accept="audio/*" required>
+            <br><br>
+            <button type="submit">Upload</button>
+        </form>
+        <div class="footer">
+            <p>&copy; 2024 Proscribe. All rights reserved.</p>
+        </div>
+    </div>
 </body>
 </html>
