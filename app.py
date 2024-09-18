@@ -17,7 +17,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # OpenAI API setup
 openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
-openai_api_key = os.getenv"sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS"
+openai_api_key = os.getenv("sk-proj-iXpA1QzCyeOwS9ORRxACT3BlbkFJgZm1iSBO3S8S64bGddlS")
 openai.api_key = openai_api_key
 
 system_prompt = """
