@@ -2,16 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proscribe - Audio Transcription</title>
+    <!-- Include Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Custom styles */
         body, html {
             height: 100%;
             margin: 0;
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            background-color: #1E3A8A; /* Blue-900 */
+            background-image: radial-gradient(gray 1px, transparent 1px), radial-gradient(gray 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0,10px 10px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,7 +29,7 @@
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
         }
 
@@ -35,6 +40,7 @@
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
+            margin: 0 auto;
         }
 
         @keyframes spin {
@@ -45,45 +51,80 @@
         .hidden {
             display: none;
         }
+
+        .gradient-text {
+            background: linear-gradient(to right, #38BDF8, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            cursor: pointer;
+            background-color: #3B82F6;
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .upload-btn:hover {
+            background-color: #2563EB;
+        }
+
+        .upload-btn input {
+            display: none;
+        }
+
+        .download-btn {
+            background-color: #10B981;
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: inline-block;
+        }
+
+        .download-btn:hover {
+            background-color: #059669;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-5xl font-bold mb-4">Proscribe</h1>
-        <p class="mb-8 text-xl text-gray-200">Convert your audio to a professional medical letter in seconds.</p>
-        
+        <h1 class="text-6xl font-bold mb-6 gradient-text">Proscribe</h1>
+        <p class="mb-8 text-xl text-gray-200">
+            Seamlessly transcribe and format your clinic letters within seconds, saving you hours of wasted admin time.
+        </p>
+
         <div id="uploadSection">
-            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                <input type="file" id="audioUpload" class="hidden" accept="audio/*">
-                <span>Select Audio File</span>
+            <label class="upload-btn">
+                Select Audio File
+                <input type="file" id="audioUpload" accept="audio/*">
             </label>
         </div>
 
         <div id="processingSection" class="hidden">
             <div class="loader"></div>
-            <p>Processing audio... Please wait.</p>
+            <p class="mt-4">Processing audio... Please wait.</p>
         </div>
 
         <div id="resultSection" class="hidden mt-6">
-            <h2 class="text-3xl font-bold mb-4">Transcribed Medical Letter</h2>
-            <p id="transcribedText" class="text-left bg-white text-blue-900 p-4 rounded-md"></p>
-            <div class="mt-4 flex justify-end space-x-4">
-                <button id="downloadDocxBtn" class="bg-transparent border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white py-2 px-4 rounded">
-                    Download as .docx
-                </button>
-            </div>
+            <h2 class="text-3xl font-bold mb-4">Transcription Complete</h2>
+            <p>Your transcription is ready! Click the button below to download the document.</p>
+            <a id="downloadDocxBtn" class="download-btn mt-6">Download as .docx</a>
         </div>
 
-        <div class="mt-8 text-gray-400 text-sm">
-            Created by Jasjit Syan
-        </div>
+        <p class="mt-8 text-gray-300 text-sm">Created by Jasjit Syan</p>
     </div>
 
     <script>
         const uploadSection = document.getElementById('uploadSection');
         const processingSection = document.getElementById('processingSection');
         const resultSection = document.getElementById('resultSection');
-        const transcribedTextElem = document.getElementById('transcribedText');
         const audioUpload = document.getElementById('audioUpload');
         const downloadDocxBtn = document.getElementById('downloadDocxBtn');
 
@@ -92,10 +133,10 @@
             if (file) {
                 uploadSection.classList.add('hidden');
                 processingSection.classList.remove('hidden');
-                
+
                 const formData = new FormData();
                 formData.append('audio_file', file);
-                
+
                 try {
                     const response = await fetch('/transcribe', {
                         method: 'POST',
@@ -103,20 +144,18 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error('Transcription failed');
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Transcription failed');
                     }
 
                     const data = await response.json();
-                    
-                    transcribedTextElem.textContent = "Transcription complete! Click the button below to download the document.";
+
                     processingSection.classList.add('hidden');
                     resultSection.classList.remove('hidden');
-                    
-                    // Enable download of .docx file
-                    const docxFile = data.docxFile;
-                    downloadDocxBtn.addEventListener('click', () => {
-                        window.location.href = `/download/${docxFile}`;
-                    });
+
+                    // Set the download link
+                    const docxFile = data.filename || data.docxFile;
+                    downloadDocxBtn.href = `/download/${encodeURIComponent(docxFile)}`;
 
                 } catch (error) {
                     console.error('Error:', error);
