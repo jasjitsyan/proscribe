@@ -101,22 +101,31 @@
                         method: 'POST',
                         body: formData
                     });
+
+                    if (!response.ok) {
+                        throw new Error('Transcription failed');
+                    }
+
                     const data = await response.json();
                     
-                    if (response.ok) {
-                        transcribedTextElem.textContent = "Transcription complete! Click the button below to download the document.";
-                        processingSection.classList.add('hidden');
-                        resultSection.classList.remove('hidden');
-                        
-                        // Enable download of .docx file
-                        const docxFile = data.docxFile;
-                        downloadDocxBtn.addEventListener('click', () => {
-                            window.location.href = `/download/${docxFile}`;
-                        });
-                    } else {
-                        alert('Error: ' + data.error);
-                        uploadSection.classList.remove('hidden');
-                        processingSection.classList.add('hidden');
-                    }
+                    transcribedTextElem.textContent = "Transcription complete! Click the button below to download the document.";
+                    processingSection.classList.add('hidden');
+                    resultSection.classList.remove('hidden');
+                    
+                    // Enable download of .docx file
+                    const docxFile = data.docxFile;
+                    downloadDocxBtn.addEventListener('click', () => {
+                        window.location.href = `/download/${docxFile}`;
+                    });
+
                 } catch (error) {
-                    console.error('Error:', error
+                    console.error('Error:', error);
+                    alert('Failed to process audio. Please try again.');
+                    uploadSection.classList.remove('hidden');
+                    processingSection.classList.add('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
