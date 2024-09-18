@@ -1,170 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Proscribe - Audio Transcription</title>
-    <!-- Include Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom styles */
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: 'Poppins', sans-serif;
-            background-color: #1E3A8A; /* Blue-900 */
-            background-image: radial-gradient(gray 1px, transparent 1px), radial-gradient(gray 1px, transparent 1px);
-            background-size: 20px 20px;
-            background-position: 0 0,10px 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
+import os
+from pathlib import Path
+from flask import Flask, request, render_template, redirect, url_for, send_from_directory
+import openai
+from docx import Document
 
-        .container {
-            text-align: center;
-            padding: 50px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            max-width: 700px;
-            width: 100%;
-        }
+# Initialize Flask app
+app = Flask(__name__)
 
-        .loader {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid white;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
+# Configuration and paths
+AUDIO_DIR = Path("./audio")
+OUTPUT_DIR = Path("./text")
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+# Ensure directories exist
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-        .hidden {
-            display: none;
-        }
+# OpenAI API setup
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-        .gradient-text {
-            background: linear-gradient(to right, #38BDF8, #3B82F6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+system_prompt = """
+You are a helpful assistant for a cardiology doctor...
+"""
 
-        .upload-btn {
-            display: inline-block;
-            cursor: pointer;
-            background-color: #3B82F6;
-            color: white;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 8px;
-            transition: background-color 0.3s;
-        }
+def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        temperature=temperature,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": transcribed_text}
+        ]
+    )
+    return response.choices[0]['message']['content']
 
-        .upload-btn:hover {
-            background-color: #2563EB;
-        }
+def save_to_word(corrected_text, output_path):
+    doc = Document()
+    lines = corrected_text.split('\n')
+    for line in lines:
+        if line.startswith('###'):
+            doc.add_heading(line[3:].strip(), level=3)
+        elif line.startswith('##'):
+            doc.add_heading(line[2:].strip(), level=2)
+        elif line.startswith('#'):
+            doc.add_heading(line[1:].strip(), level=1)
+        else:
+            doc.add_paragraph(line)
+    doc.save(output_path)
 
-        .upload-btn input {
-            display: none;
-        }
+@app.route('/')
+def index():
+    return render_template('upload.html')
 
-        .download-btn {
-            background-color: #10B981;
-            color: white;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            display: inline-block;
-        }
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    if 'audio_file' not in request.files:
+        return 'No file part', 400
+    
+    audio_file = request.files['audio_file']
+    supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+    
+    if audio_file.filename.split('.')[-1] not in supported_formats:
+        return 'Unsupported file format', 400
+    
+    # Save the audio file
+    audio_file_path = AUDIO_DIR / audio_file.filename
+    audio_file.save(audio_file_path)
 
-        .download-btn:hover {
-            background-color: #059669;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="text-6xl font-bold mb-6 gradient-text">Proscribe</h1>
-        <p class="mb-8 text-xl text-gray-200">
-            Seamlessly transcribe and format your clinic letters within seconds, saving you hours of wasted admin time.
-        </p>
+    # Open the most recent audio file and transcribe it
+    with open(audio_file_path, "rb") as f:
+        transcription = openai.Audio.transcribe("whisper-1", f)
 
-        <div id="uploadSection">
-            <label class="upload-btn">
-                Select Audio File
-                <input type="file" id="audioUpload" accept="audio/*">
-            </label>
-        </div>
+    # Generate corrected transcript
+    corrected_text = generate_corrected_transcript(0.2, system_prompt, transcription['text'])
 
-        <div id="processingSection" class="hidden">
-            <div class="loader"></div>
-            <p class="mt-4">Processing audio... Please wait.</p>
-        </div>
+    # Save to Word file
+    output_file = OUTPUT_DIR / f"corrected_transcript_{audio_file.filename.split('.')[0]}.docx"
+    save_to_word(corrected_text, output_file)
 
-        <div id="resultSection" class="hidden mt-6">
-            <h2 class="text-3xl font-bold mb-4">Transcription Complete</h2>
-            <p>Your transcription is ready! Click the button below to download the document.</p>
-            <a id="downloadDocxBtn" class="download-btn mt-6">Download as .docx</a>
-        </div>
+    # Provide the download link for the generated Word document
+    return redirect(url_for('download_file', filename=output_file.name))
 
-        <p class="mt-8 text-gray-300 text-sm">Created by Jasjit Syan</p>
-    </div>
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(OUTPUT_DIR, filename, as_attachment=True)
 
-    <script>
-        const uploadSection = document.getElementById('uploadSection');
-        const processingSection = document.getElementById('processingSection');
-        const resultSection = document.getElementById('resultSection');
-        const audioUpload = document.getElementById('audioUpload');
-        const downloadDocxBtn = document.getElementById('downloadDocxBtn');
-
-        audioUpload.addEventListener('change', async function() {
-            const file = audioUpload.files[0];
-            if (file) {
-                uploadSection.classList.add('hidden');
-                processingSection.classList.remove('hidden');
-
-                const formData = new FormData();
-                formData.append('audio_file', file);
-
-                try {
-                    const response = await fetch('/transcribe', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Transcription failed');
-                    }
-
-                    const data = await response.json();
-
-                    processingSection.classList.add('hidden');
-                    resultSection.classList.remove('hidden');
-
-                    // Set the download link
-                    const docxFile = data.filename || data.docxFile;
-                    downloadDocxBtn.href = `/download/${encodeURIComponent(docxFile)}`;
-
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Failed to process audio. Please try again.');
-                    uploadSection.classList.remove('hidden');
-                    processingSection.classList.add('hidden');
-                }
-            }
-        });
-    </script>
-</body>
-</html>
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
