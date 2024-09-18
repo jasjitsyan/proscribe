@@ -3,6 +3,7 @@ from pathlib import Path
 from flask import Flask, request, render_template, jsonify, make_response
 import openai
 from docx import Document
+from docx.shared import Pt
 from io import BytesIO
 
 # Initialize Flask app
@@ -50,11 +51,15 @@ def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
 def save_to_word(corrected_text):
     doc = Document()
     lines = corrected_text.split('\n')
+
     for line in lines:
         if line.startswith('###'):
             doc.add_heading(line[3:].strip(), level=3)
         else:
-            doc.add_paragraph(line)
+            paragraph = doc.add_paragraph(line)
+            # Remove spacing after each paragraph
+            paragraph_format = paragraph.paragraph_format
+            paragraph_format.space_after = Pt(0)
     
     # Create an in-memory BytesIO stream to return as file
     doc_stream = BytesIO()
@@ -102,3 +107,4 @@ def download_docx():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
