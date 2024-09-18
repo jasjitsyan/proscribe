@@ -107,10 +107,13 @@ def upload_file():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
-        # Transcribe audio using OpenAI Whisper API
-        with open(upload_path, "rb") as f:
-            transcription = openai.Audio.transcribe("whisper-1", f)
-            transcribed_text = transcription['text']
+        # Transcribe audio using the updated OpenAI Whisper API
+        audio_file = open(upload_path, "rb")
+        transcription = openai.Audio.create_transcription(
+            file=audio_file,
+            model="whisper-1"
+        )
+        transcribed_text = transcription['text']
 
         # Generate corrected transcript using ChatGPT
         corrected_text = generate_corrected_transcript(
