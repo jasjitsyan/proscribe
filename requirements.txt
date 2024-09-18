@@ -1,7 +1,4 @@
-Flask
-gunicorn
-openai
-python-docx
-python-dotenv
-Werkzeug
-docx
+Flask==2.0.1
+openai==0.27.0
+python-docx==0.8.11
+gunicorn==23.0.0
