@@ -63,11 +63,14 @@ def transcribe_audio():
     audio_file_path = AUDIO_DIR / audio_file.filename
     audio_file.save(audio_file_path)
 
-    # Simulate transcription processing time (in real scenario, use OpenAI's API)
-    time.sleep(3)  # simulate processing time
+    # Perform transcription using OpenAI's Whisper API
+    try:
+        with open(audio_file_path, 'rb') as f:
+            transcript = openai.Audio.transcribe("whisper-1", f)
 
-    # In a real scenario, get transcription from OpenAI's API
-    transcribed_text = "This is a sample transcribed medical letter. Replace this with actual transcribed text."
+        transcribed_text = transcript['text']
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
     return jsonify({'transcribedText': transcribed_text})
 
