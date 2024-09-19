@@ -28,7 +28,7 @@ Important not to redact the plan from the clinical review. Keep the accurate pro
 Always start the 'Clinical Review' with 'It was a pleasure reviewing [patient's name] in the Cardiology clinic today. [He/She] is a [age] year old patient...'
 At the end of the letter always finish with:
 '###Signature'
-Dr. Simarpal Singh
+Dr. Simar Pal Singh
 Specialist Cardiology 
 \n
 Cardiology Department: Telephone: 020 8321 5336/Email: caw-tr.westmidadmin7@nhs.net
