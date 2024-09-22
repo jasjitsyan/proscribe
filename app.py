@@ -1,25 +1,30 @@
 import os
 from pathlib import Path
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, make_response
 from flask_cors import CORS
 import openai
 from docx import Document
 from docx.shared import Pt
 from io import BytesIO
 
-app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
-CORS(app)
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Configuration and paths
 AUDIO_DIR = Path("./audio")
+OUTPUT_DIR = Path("./text")
+
+# Ensure directories exist
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # OpenAI API setup
 openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 system_prompt = """
-... (your existing system prompt) ...
+You are a helpful assistant for a cardiology doctor. Your task is to take the text and convert the points provided into prose. Correct any spelling and grammar discrepancies...
 """
 
 def generate_corrected_transcript(temperature, system_prompt, transcribed_text):
@@ -51,10 +56,10 @@ def save_to_word(corrected_text):
     return doc_stream
 
 @app.route('/')
-def serve():
-    return app.send_static_file('index.html')
+def index():
+    return render_template('upload.html')
 
-@app.route('/api/transcribe', methods=['POST'])
+@app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
     if 'audio_file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -66,32 +71,23 @@ def transcribe_audio():
     try:
         with open(audio_file_path, 'rb') as f:
             transcript = openai.Audio.transcribe("whisper-1", f)
-
         transcribed_text = transcript['text']
-        return jsonify({'transcribedText': transcribed_text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        # Clean up the temporary audio file
-        os.remove(audio_file_path)
 
-@app.route('/api/download-docx', methods=['POST'])
+    return jsonify({'transcribedText': transcribed_text})
+
+@app.route('/download-docx', methods=['POST'])
 def download_docx():
-    data = request.json
-    transcribed_text = data.get('transcribed_text')
-    
-    if not transcribed_text:
-        return jsonify({'error': 'No transcribed text provided'}), 400
-
+    transcribed_text = request.form['transcribed_text']
     corrected_text = generate_corrected_transcript(0.7, system_prompt, transcribed_text)
+    
     doc_stream = save_to_word(corrected_text)
-
-    return send_file(
-        doc_stream,
-        as_attachment=True,
-        download_name='medical_letter.docx',
-        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    )
+    response = make_response(doc_stream.read())
+    response.headers.set('Content-Disposition', 'attachment', filename='medical_letter.docx')
+    response.headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
