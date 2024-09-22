@@ -5,18 +5,14 @@ from pathlib import Path
 from psycopg2 import pool
 import psycopg2.extras
 
-# Flask App initialization
-app = Flask(__name__)
-
-# Serve static files (such as CSS and JS)
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory('static', filename)
-
-# Serve the index.html page
+# Route for the home page ("/") that renders index.html
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Start the Flask app
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # PostgreSQL connection setup
 DATABASE_URL = os.getenv("DATABASE_URL")
