@@ -1,98 +1,218 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transcription App</title>
-  <link rel="stylesheet" href="/static/css/styles.css">
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="/static/image/logo.png" alt="Logo" class="logo">
-      <p class="tagline">Transcribe your clinic letter seamlessly in seconds.</p>
-      <p class="subtitle">Developed by doctors for doctors.</p>
-    </div>
+"use client";
 
-    <div class="tabs">
-      <button class="tab active" id="record-tab">Record Audio</button>
-      <button class="tab" id="upload-tab">Upload Audio</button>
-    </div>
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, Upload, Pause, Rewind, FastForward, Download } from "lucide-react";
 
-    <!-- Recording Section -->
-    <div class="tab-content" id="record-content">
-      <button class="btn record-btn" id="start-record">Start Recording</button>
-      <button class="btn" id="stop-record">Stop Recording</button>
+export default function TranscriptionApp() {
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transcribedText, setTranscribedText] = useState("");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-      <canvas id="waveform"></canvas>
-      <audio id="audio-player" controls></audio>
+  useEffect(() => {
+    if (audioUrl && canvasRef.current) {
+      const audio = new Audio(audioUrl);
+      const ctx = canvasRef.current.getContext("2d");
+      if (!ctx) return;
 
-      <div class="audio-controls">
-        <button class="btn rewind">Rewind 10s</button>
-        <button class="btn fastforward">Fast Forward 10s</button>
-      </div>
-    </div>
+      audio.addEventListener("loadedmetadata", () => {
+        const analyser = new (window.AudioContext || (window as any).webkitAudioContext)().createAnalyser();
+        const source = new (window.AudioContext || (window as any).webkitAudioContext)().createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(new (window.AudioContext || (window as any).webkitAudioContext)().destination);
 
-    <!-- Upload Section -->
-    <div class="tab-content hidden" id="upload-content">
-      <div class="upload-area" id="upload-area">
-        <p>Drag and drop an audio file here, or click to select a file</p>
-        <input type="file" id="file-input" accept="audio/*" class="hidden">
-      </div>
-      <p id="file-name"></p>
-    </div>
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
 
-    <!-- Process Button -->
-    <button class="btn process-btn" id="process-audio">Transcribe Audio</button>
+        const draw = () => {
+          requestAnimationFrame(draw);
+          analyser.getByteFrequencyData(dataArray);
 
-    <!-- Transcription Output -->
-    <div class="transcription-output hidden" id="transcription-output">
-      <h2>Transcribed Medical Letter</h2>
-      <p id="transcribed-text"></p>
-      <button class="btn download-btn" id="download-docx">Download as Word File</button>
-    </div>
-  </div>
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
 
-  <script>
-    const fileInput = document.getElementById('file-input');
-    const processAudioButton = document.getElementById('process-audio');
-    const transcriptionOutput = document.getElementById('transcription-output');
-    const transcribedText = document.getElementById('transcribed-text');
+          const barWidth = (canvasRef.current!.width / bufferLength) * 2.5;
+          let x = 0;
 
-    // Drag-and-drop event listeners
-    document.getElementById('upload-area').addEventListener('dragover', (event) => {
-      event.preventDefault();
-    });
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = dataArray[i] / 2;
 
-    document.getElementById('upload-area').addEventListener('drop', (event) => {
-      event.preventDefault();
-      const file = event.dataTransfer.files[0];
-      if (file) {
-        fileInput.files = event.dataTransfer.files;
-        document.getElementById('file-name').textContent = `File selected: ${file.name}`;
+            ctx.fillStyle = "#007ea7";
+            ctx.fillRect(x, canvasRef.current!.height - barHeight, barWidth, barHeight);
+
+            x += barWidth + 1;
+          }
+        };
+
+        draw();
+      });
+    }
+  }, [audioUrl]);
+
+  const startRecording = () => {
+    setIsRecording(true);
+    // Implement actual recording logic here
+    // For demonstration, we'll just set a dummy audio URL after 3 seconds
+    setTimeout(() => {
+      setAudioUrl("/placeholder-audio.mp3");
+      setIsRecording(false);
+    }, 3000);
+  };
+
+  const stopRecording = () => {
+    setIsRecording(false);
+    // Implement stop recording logic here
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+      setAudioUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const file = event.dataTransfer.files[0];
+    if (file && file.type.startsWith("audio/")) {
+      setAudioFile(file);
+      setAudioUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const processAudio = async () => {
+    if (!audioFile) return; // Ensure there's an audio file
+
+    setIsProcessing(true);
+
+    const formData = new FormData();
+    formData.append("audio_file", audioFile);
+
+    try {
+      const response = await fetch('https://your-flask-backend.herokuapp.com/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTranscribedText(data.transcribedText);
+      } else {
+        console.error('Error processing audio:', data.error);
       }
-    });
+    } catch (error) {
+      console.error('Network error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-    // Process audio (sending to Flask backend)
-    processAudioButton.addEventListener('click', function() {
-      const formData = new FormData();
-      const file = fileInput.files[0];
-      if (file) {
-        formData.append('audio_file', file);
+  const downloadDocx = () => {
+    // Implement actual download logic here
+    console.log("Downloading DOCX...");
+  };
 
-        // Sending file to Flask backend (/transcribe endpoint)
-        fetch('/transcribe', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          transcribedText.textContent = data.transcribedText;
-          transcriptionOutput.classList.remove('hidden');
-        })
-        .catch(error => console.error('Error:', error));
-      }
-    });
-  </script>
-</body>
-</html>
+  return (
+    <div className="min-h-screen bg-[#f0f4f8] flex flex-col items-center justify-center p-4 relative">
+      <div className="absolute inset-0 bg-[#007ea7] opacity-5" style={{
+        backgroundImage: 'radial-gradient(#007ea7 1px, transparent 1px)',
+        backgroundSize: '20px 20px'
+      }}></div>
+      <Card className="w-full max-w-3xl bg-white shadow-lg relative z-10">
+        <CardContent className="p-6">
+          <img src="/placeholder.svg?height=60&width=200" alt="Logo" className="mx-auto mb-4" />
+          <p className="text-center text-[#003459] mb-2">Transcribe your clinic letter seamlessly in seconds.</p>
+          <p className="text-center text-[#003459] text-sm mb-6">Developed by doctors for doctors.</p>
+
+          <Tabs defaultValue="record" className="mb-6">
+            <TabsList className="grid w-full grid-cols-2 bg-[#e1e8f0]">
+              <TabsTrigger value="record" className="data-[state=active]:bg-[#007ea7] data-[state=active]:text-white">Record Audio</TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-[#007ea7] data-[state=active]:text-white">Upload Audio</TabsTrigger>
+            </TabsList>
+            <TabsContent value="record">
+              <div className="flex flex-col items-center space-y-4">
+                <Button onClick={isRecording ? stopRecording : startRecording} className="bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+                  {isRecording ? <Pause className="mr-2" /> : <Mic className="mr-2" />}
+                  {isRecording ? "Stop Recording" : "Start Recording"}
+                </Button>
+                {audioUrl && (
+                  <div className="w-full">
+                    <canvas ref={canvasRef} width="400" height="100" className="w-full" />
+                    <audio ref={audioRef} src={audioUrl} controls className="w-full mt-2" />
+                    <div className="flex justify-center space-x-2 mt-2">
+                      <Button size="sm" onClick={() => audioRef.current?.currentTime -= 10} className="bg-[#007ea7] hover:bg-[#00a8e8] text-white"><Rewind /></Button>
+                      <Button size="sm" onClick={() => audioRef.current?.currentTime += 10} className="bg-[#007ea7] hover:bg-[#00a8e8] text-white"><FastForward /></Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="upload">
+              <div
+                className="border-2 border-dashed border-[#007ea7] rounded-lg p-8 text-center cursor-pointer"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mx-auto mb-4 text-[#007ea7]" size={48} />
+                <p className="text-[#003459]">Drag and drop an audio file here, or click to select a file</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+              {audioFile && (
+                <p className="mt-2 text-sm text-[#003459]">File selected: {audioFile.name}</p>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {(audioUrl || audioFile) && (
+            <Button onClick={processAudio} className="w-full bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+              {isProcessing ? "Processing..." : "Transcribe Audio"}
+            </Button>
+          )}
+
+          {transcribedText && (
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-2 text-[#003459]">Transcribed Medical Letter</h2>
+              <p className="mb-4 text-[#003459]">{transcribedText}</p>
+              <Button onClick={downloadDocx} className="bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+                <Download className="mr-2" />Download as Word File
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-8 text-center text-xs text-[#003459]">
+            <p className="mb-2">
+              This web app uses AI to transcribe and format your letter. Avoid patient identifiers.
+            </p>
+            <p>
+              We suggest using initials, e.g., Mr. John Doe can be referred to as Mr. JD.
+            </p>
+            <p className="mt-2">© 2024 All rights reserved.</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
