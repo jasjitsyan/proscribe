@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, render_template
 import openai
 import os
 from pathlib import Path
@@ -7,7 +7,10 @@ import psycopg2.extras
 
 # Flask App initialization
 app = Flask(__name__)
-
+@app.route('/')
+def index():
+    return render_template('index.html')
+    
 # PostgreSQL connection setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 connection_pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn=DATABASE_URL, sslmode="require")
