@@ -1,174 +1,177 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proscribe - Audio Transcription</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: 'Poppins', sans-serif;
-            background-color: #001f3f;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-image: radial-gradient(#888, #001f3f 1px, #001f3f 2px);
-            background-size: 20px 20px;
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, Upload, Pause, Rewind, FastForward, Download } from "lucide-react";
+
+export default function TranscriptionApp() {
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [transcribedText, setTranscribedText] = useState("");
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+
+  // Start recording audio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          setRecordedChunks((prev) => [...prev, event.data]);
         }
+      };
 
-        .container {
-            text-align: center;
-            padding: 50px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 100%;
-        }
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone", err);
+    }
+  };
 
-        .logo-img {
-            width: 100%;  
-            max-width: 1000px;  
-            height: auto;  
-            margin-bottom: 5px; /* Reduce margin to remove large space */
-        }
+  // Stop recording audio
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
 
-        h2 {
-            font-size: 1.1rem;
-            color: #001f3f;
-            margin-top: 0; /* Remove extra space above the heading */
-            margin-bottom: 10px; /* Optional: Reduce the space below the heading */
-        }
+    const audioBlob = new Blob(recordedChunks, { type: "audio/wav" });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    setAudioUrl(audioUrl);
+    setAudioFile(audioBlob); // Set audioBlob as the file to be uploaded
+  };
 
-        p {
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 1.0rem;
-        }
+  // Handle playback of recorded audio
+  const playAudio = () => {
+    audioRef.current?.play();
+  };
 
-        input[type="file"] {
-            padding: 10px;
-            background-color: #001f3f;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
+  // Display audio waveform
+  useEffect(() => {
+    if (audioUrl && canvasRef.current) {
+      const audio = new Audio(audioUrl);
+      const ctx = canvasRef.current.getContext("2d");
+      if (!ctx) return;
 
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s ease;
-        }
+      audio.addEventListener("play", () => {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioCtx.createAnalyser();
+        const source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
 
-        button:hover {
-            background-color: #0056b3;
-        }
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
 
-        .footer {
-            margin-top: 30px;
-            color: #aaa;
-            font-size: 0.6rem;
-        }
+        const draw = () => {
+          if (!canvasRef.current || !audioRef.current) return;
 
-        .hidden {
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Insert the logo image and apply the class for resizing -->
-        <img src="static/image/logo.png" alt="Proscribe Logo" class="logo-img">
+          requestAnimationFrame(draw);
 
-        <h2>Seamlessly transcribe audio into a formatted clinic letter in seconds.</h2>
-        <p>Upload an audio file to get started with the transcription.</p>
-        <form id="upload-form">
-            <input type="file" name="audio_file" id="audio-file" accept="audio/*" required>
-            <br><br>
-            <button type="submit">Upload</button>
-        </form>
+          analyser.getByteTimeDomainData(dataArray);
+          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-        <div id="processing" class="hidden">
-            <p>Processing audio... Please wait.</p>
-        </div>
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#007ea7";
+          ctx.beginPath();
 
-        <div id="result" class="hidden">
-            <h2>Transcribed Medical Letter</h2>
-            <p id="transcribed-text"></p>
-            <button id="download-docx-btn">Format and Download as Word File</button>
-        </div>
+          const sliceWidth = canvasRef.current.width / bufferLength;
+          let x = 0;
 
-        <div class="footer">
-            <p>&copy; 2024 Proscribe. All rights reserved. <br> Created by Jasjit Syan</p>
-        </div>
-    </div>
+          for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = (v * canvasRef.current.height) / 2;
 
-    <script>
-        const form = document.getElementById('upload-form');
-        const processing = document.getElementById('processing');
-        const result = document.getElementById('result');
-        const transcribedTextElem = document.getElementById('transcribed-text');
-
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const fileInput = document.getElementById('audio-file');
-            const file = fileInput.files[0];
-
-            if (file) {
-                processing.classList.remove('hidden');
-
-                const formData = new FormData();
-                formData.append('audio_file', file);
-
-                fetch('/transcribe', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    processing.classList.add('hidden');
-                    result.classList.remove('hidden');
-                    transcribedTextElem.textContent = data.transcribedText;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    processing.textContent = 'An error occurred. Please try again.';
-                });
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
             }
-        });
+            x += sliceWidth;
+          }
 
-        // Save as .docx file
-        document.getElementById('download-docx-btn').addEventListener('click', function() {
-            const text = document.getElementById('transcribed-text').textContent;
-            const formData = new FormData();
-            formData.append('transcribed_text', text);
+          ctx.lineTo(canvasRef.current.width, canvasRef.current.height / 2);
+          ctx.stroke();
+        };
 
-            fetch('/download-docx', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'medical_letter.docx';
-                a.click();
-                URL.revokeObjectURL(url);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        draw();
+      });
+    }
+  }, [audioUrl]);
+
+  // Upload the recorded audio to the backend
+  const uploadAudio = async () => {
+    if (audioFile) {
+      const formData = new FormData();
+      formData.append("audio_file", audioFile, "recording.wav");
+
+      try {
+        const response = await fetch("/transcribe", {
+          method: "POST",
+          body: formData,
         });
-    </script>
-</body>
-</html>
+        const data = await response.json();
+        setTranscribedText(data.transcribedText);
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f0f4f8] flex flex-col items-center justify-center p-4 relative">
+      <Card className="w-full max-w-3xl bg-white shadow-lg relative z-10">
+        <CardContent className="p-6">
+          <Tabs defaultValue="record" className="mb-6">
+            <TabsList className="grid w-full grid-cols-2 bg-[#e1e8f0]">
+              <TabsTrigger value="record" className="data-[state=active]:bg-[#007ea7] data-[state=active]:text-white">
+                Record Audio
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-[#007ea7] data-[state=active]:text-white">
+                Upload Audio
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="record">
+              <div className="flex flex-col items-center space-y-4">
+                <Button onClick={isRecording ? stopRecording : startRecording} className="bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+                  {isRecording ? <Pause className="mr-2" /> : <Mic className="mr-2" />}
+                  {isRecording ? "Stop Recording" : "Start Recording"}
+                </Button>
+                <canvas ref={canvasRef} width="400" height="100" className="w-full mt-2" />
+                {audioUrl && <audio ref={audioRef} src={audioUrl} controls className="w-full mt-2" />}
+                {audioUrl && (
+                  <div className="flex justify-center space-x-2 mt-2">
+                    <Button size="sm" onClick={() => audioRef.current?.currentTime -= 10} className="bg-[#007ea7] text-white">
+                      <Rewind />
+                    </Button>
+                    <Button size="sm" onClick={() => audioRef.current?.currentTime += 10} className="bg-[#007ea7] text-white">
+                      <FastForward />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+          <Button onClick={uploadAudio} className="w-full bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+            Upload and Transcribe
+          </Button>
+          {transcribedText && (
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-2 text-[#003459]">Transcribed Medical Letter</h2>
+              <p className="mb-4 text-[#003459]">{transcribedText}</p>
+              <Button className="bg-[#00a8e8] hover:bg-[#007ea7] text-white">
+                <Download className="mr-2" />Download as Word File
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
