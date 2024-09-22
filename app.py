@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response, render_template
+from flask import Flask, request, jsonify, make_response, render_template, send_from_directory
 import openai
 import os
 from pathlib import Path
@@ -7,10 +7,17 @@ import psycopg2.extras
 
 # Flask App initialization
 app = Flask(__name__)
+
+# Serve static files (such as CSS and JS)
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
+
+# Serve the index.html page
 @app.route('/')
 def index():
     return render_template('index.html')
-    
+
 # PostgreSQL connection setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 connection_pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn=DATABASE_URL, sslmode="require")
@@ -19,11 +26,11 @@ connection_pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn=DATABASE_URL, ss
 openai.organization = 'org-yRlfrdqdXMIAYGfdaIqbyL28'
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Directory paths
+# Directory paths for saving audio files
 AUDIO_DIR = Path("./audio")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
-# Transcribe route
+# Route to handle audio transcription
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
     if 'audio_file' not in request.files:
@@ -51,6 +58,7 @@ def transcribe_audio():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Function to save the transcription and metadata to PostgreSQL
 def save_transcription(transcription, ip_address, user_agent):
     try:
         conn = connection_pool.getconn()
