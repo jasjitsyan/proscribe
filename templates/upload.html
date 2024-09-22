@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transcription App</title>
-  <link rel="stylesheet" href="/static/css/styles.css">
+  <!-- Use Flask's url_for to link to static CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img src="/static/image/logo.png" alt="Logo" class="logo">
+      <!-- Use Flask's url_for to link to the logo image -->
+      <img src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo" class="logo">
       <p class="tagline">Transcribe your clinic letter seamlessly in seconds.</p>
       <p class="subtitle">Developed by doctors for doctors.</p>
     </div>
@@ -53,6 +55,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js"></script>
+  <!-- Include your JS file using Flask's url_for -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
