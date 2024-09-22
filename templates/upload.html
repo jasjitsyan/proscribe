@@ -4,58 +4,203 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transcription App</title>
-  <!-- Use Flask's url_for to link to static CSS -->
+  <!-- Add your CSS file or inline styles here -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    /* Inline styles if you don't have an external CSS file */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      color: #003459;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header img {
+      width: 150px;
+      margin-bottom: 10px;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .tabs button {
+      padding: 10px 20px;
+      background-color: #007ea7;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .tabs button.active {
+      background-color: #00a8e8;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background-color: #007ea7;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .audio-controls {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100px;
+      background-color: #e1e8f0;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
+
   <div class="container">
     <div class="header">
-      <!-- Use Flask's url_for to link to the logo image -->
-      <img src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo" class="logo">
-      <p class="tagline">Transcribe your clinic letter seamlessly in seconds.</p>
-      <p class="subtitle">Developed by doctors for doctors.</p>
+      <img src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo">
+      <p>Transcribe your clinic letter seamlessly in seconds.</p>
+      <p>Developed by doctors for doctors.</p>
     </div>
-    
+
     <div class="tabs">
-      <button class="tab active" id="record-tab">Record Audio</button>
-      <button class="tab" id="upload-tab">Upload Audio</button>
+      <button class="tab active" data-target="record-content">Record Audio</button>
+      <button class="tab" data-target="upload-content">Upload Audio</button>
     </div>
-    
+
     <!-- Recording Section -->
-    <div class="tab-content" id="record-content">
-      <button class="btn record-btn" id="start-record">Start Recording</button>
-      <button class="btn" id="stop-record">Stop Recording</button>
-      
+    <div class="tab-content active" id="record-content">
+      <button class="btn" id="start-record">Start Recording</button>
+      <button class="btn" id="stop-record" style="display: none;">Stop Recording</button>
+
       <canvas id="waveform"></canvas>
       <audio id="audio-player" controls></audio>
-      
+
       <div class="audio-controls">
-        <button class="btn rewind">Rewind 10s</button>
-        <button class="btn fastforward">Fast Forward 10s</button>
+        <button class="btn" id="rewind-10s">Rewind 10s</button>
+        <button class="btn" id="fastforward-10s">Fast Forward 10s</button>
       </div>
     </div>
 
     <!-- Upload Section -->
-    <div class="tab-content hidden" id="upload-content">
+    <div class="tab-content" id="upload-content">
       <div class="upload-area" id="upload-area">
         <p>Drag and drop an audio file here, or click to select a file</p>
-        <input type="file" id="file-input" accept="audio/*" class="hidden">
+        <input type="file" id="file-input" accept="audio/*">
       </div>
       <p id="file-name"></p>
     </div>
 
     <!-- Process Button -->
-    <button class="btn process-btn" id="process-audio">Transcribe Audio</button>
+    <button class="btn" id="process-audio">Transcribe Audio</button>
 
     <!-- Transcription Output -->
-    <div class="transcription-output hidden" id="transcription-output">
+    <div id="transcription-output" style="display: none;">
       <h2>Transcribed Medical Letter</h2>
       <p id="transcribed-text"></p>
-      <button class="btn download-btn" id="download-docx">Download as Word File</button>
+      <button class="btn" id="download-docx">Download as Word File</button>
     </div>
   </div>
 
-  <!-- Include your JS file using Flask's url_for -->
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <!-- Include your JS file -->
+  <script>
+    // Handle Tab Switching
+    document.querySelectorAll('.tabs button').forEach(button => {
+      button.addEventListener('click', function() {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(this.getAttribute('data-target')).classList.add('active');
+        this.classList.add('active');
+      });
+    });
+
+    // Audio Recording Functionality
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioPlayer = document.getElementById('audio-player');
+    
+    document.getElementById('start-record').addEventListener('click', () => {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          audioPlayer.src = audioUrl;
+        };
+        
+        document.getElementById('start-record').style.display = 'none';
+        document.getElementById('stop-record').style.display = 'inline-block';
+      });
+    });
+
+    document.getElementById('stop-record').addEventListener('click', () => {
+      mediaRecorder.stop();
+      document.getElementById('start-record').style.display = 'inline-block';
+      document.getElementById('stop-record').style.display = 'none';
+    });
+
+    // Handle Rewind and Fast Forward
+    document.getElementById('rewind-10s').addEventListener('click', () => {
+      audioPlayer.currentTime -= 10;
+    });
+
+    document.getElementById('fastforward-10s').addEventListener('click', () => {
+      audioPlayer.currentTime += 10;
+    });
+
+    // Handle File Upload
+    document.getElementById('file-input').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const audioUrl = URL.createObjectURL(file);
+        audioPlayer.src = audioUrl;
+        document.getElementById('file-name').innerText = file.name;
+      }
+    });
+
+    // Handle Audio Processing
+    document.getElementById('process-audio').addEventListener('click', () => {
+      // Logic for sending audio to backend for transcription
+      alert('Processing audio...');
+    });
+  </script>
 </body>
 </html>
