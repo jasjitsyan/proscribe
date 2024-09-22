@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transcription App</title>
-  <!-- Link to external CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo" class="logo">
+      <img src="/static/image/logo.png" alt="Logo" class="logo">
       <p class="tagline">Transcribe your clinic letter seamlessly in seconds.</p>
       <p class="subtitle">Developed by doctors for doctors.</p>
     </div>
@@ -54,56 +53,45 @@
     </div>
   </div>
 
-  <!-- JavaScript for handling file uploads, recording, and transcriptions -->
   <script>
-    // Add event listeners and logic for recording, uploading files, and processing audio
-    document.addEventListener('DOMContentLoaded', function() {
-      const recordTab = document.getElementById('record-tab');
-      const uploadTab = document.getElementById('upload-tab');
-      const recordContent = document.getElementById('record-content');
-      const uploadContent = document.getElementById('upload-content');
-      const fileInput = document.getElementById('file-input');
-      const processAudioButton = document.getElementById('process-audio');
+    const fileInput = document.getElementById('file-input');
+    const processAudioButton = document.getElementById('process-audio');
+    const transcriptionOutput = document.getElementById('transcription-output');
+    const transcribedText = document.getElementById('transcribed-text');
 
-      // Toggle between Record and Upload tabs
-      recordTab.addEventListener('click', function() {
-        recordContent.classList.remove('hidden');
-        uploadContent.classList.add('hidden');
-      });
+    // Drag-and-drop event listeners
+    document.getElementById('upload-area').addEventListener('dragover', (event) => {
+      event.preventDefault();
+    });
 
-      uploadTab.addEventListener('click', function() {
-        recordContent.classList.add('hidden');
-        uploadContent.classList.remove('hidden');
-      });
+    document.getElementById('upload-area').addEventListener('drop', (event) => {
+      event.preventDefault();
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        fileInput.files = event.dataTransfer.files;
+        document.getElementById('file-name').textContent = `File selected: ${file.name}`;
+      }
+    });
 
-      // Handle file upload
-      fileInput.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file) {
-          document.getElementById('file-name').textContent = 'File selected: ' + file.name;
-        }
-      });
+    // Process audio (sending to Flask backend)
+    processAudioButton.addEventListener('click', function() {
+      const formData = new FormData();
+      const file = fileInput.files[0];
+      if (file) {
+        formData.append('audio_file', file);
 
-      // Process audio (sending to Flask backend)
-      processAudioButton.addEventListener('click', function() {
-        const formData = new FormData();
-        const file = fileInput.files[0];
-        if (file) {
-          formData.append('audio_file', file);
-          
-          // Sending file to Flask backend (/transcribe endpoint)
-          fetch('/transcribe', {
-            method: 'POST',
-            body: formData
-          })
-          .then(response => response.json())
-          .then(data => {
-            document.getElementById('transcribed-text').textContent = data.transcribedText;
-            document.getElementById('transcription-output').classList.remove('hidden');
-          })
-          .catch(error => console.error('Error:', error));
-        }
-      });
+        // Sending file to Flask backend (/transcribe endpoint)
+        fetch('/transcribe', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          transcribedText.textContent = data.transcribedText;
+          transcriptionOutput.classList.remove('hidden');
+        })
+        .catch(error => console.error('Error:', error));
+      }
     });
   </script>
 </body>
