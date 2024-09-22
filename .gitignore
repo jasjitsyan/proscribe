@@ -1,13 +1,18 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
+# Node modules
+node_modules/
 
-# Virtual environment
+# Python virtual environment
 venv/
+*.pyc
+__pycache__/
 
 # Environment variables
 .env
 
-# Uploaded files
-uploads/
-outputs/
+# Temporary files
+/audio/*
+!/audio/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
