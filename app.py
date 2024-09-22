@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template
 import openai
 import os
 from pathlib import Path
@@ -6,16 +6,7 @@ from psycopg2 import pool
 import psycopg2.extras
 
 # Initialize Flask app
-app = Flask(__name__)
-
-# Route for the homepage
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-# Start the app
-if __name__ == '__main__':
-    app.run(debug=True)
+app = Flask(__name__, static_folder='static')
 
 # PostgreSQL connection setup
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -28,6 +19,11 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Directory paths for saving audio files
 AUDIO_DIR = Path("./audio")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+# Route for serving the frontend
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # Route to handle audio transcription
 @app.route('/transcribe', methods=['POST'])
