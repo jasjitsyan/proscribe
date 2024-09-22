@@ -5,12 +5,15 @@ from pathlib import Path
 from psycopg2 import pool
 import psycopg2.extras
 
-# Route for the home page ("/") that renders index.html
+# Initialize Flask app
+app = Flask(__name__)
+
+# Route for the homepage
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Start the Flask app
+# Start the app
 if __name__ == '__main__':
     app.run(debug=True)
 
